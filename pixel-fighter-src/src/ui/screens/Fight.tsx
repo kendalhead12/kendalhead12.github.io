@@ -74,7 +74,9 @@ export function FightScreen({ spec, onTestExit }: { spec: MatchSpec; onTestExit:
   const isTraining = spec.mode === 'training' || spec.mode === 'test';
   const [train, setTrain] = useState<TrainingOptions>({ dummy: 'stand', infiniteHealth: true, infiniteMeter: true });
   const [speed, setSpeed] = useState(1);
+  const [barOpen, setBarOpen] = useState(true);
   const touchOn = settings.touchControls === 'on' || (settings.touchControls === 'auto' && (navigator.maxTouchPoints > 0 || 'ontouchstart' in window));
+  useEffect(() => { if (touchOn) setBarOpen(false); }, [touchOn]);
 
   useEffect(() => {
     const c = canvas.current!;
@@ -107,6 +109,7 @@ export function FightScreen({ spec, onTestExit }: { spec: MatchSpec; onTestExit:
       },
     });
     game.current = g;
+    (window as any).__game = g; // handy for debugging & automated tests
     g.start();
     return () => g.stop();
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -140,7 +143,9 @@ export function FightScreen({ spec, onTestExit }: { spec: MatchSpec; onTestExit:
       <button className="tiny" onClick={() => game.current?.setPaused(!paused)}>{paused ? '▶' : 'II'}</button>
       {spec.mode === 'test' && <button className="tiny gold" onClick={onTestExit}>◀ EDITOR</button>}
     </div>
-    {isTraining && !paused && <div className="training-bar">
+    {isTraining && !paused && !barOpen && <div className="training-bar" style={{ bottom: 'auto', top: 54, left: 6, background: 'none' }}><button className="tiny gold" onClick={() => setBarOpen(true)}>⚙ {spec.mode === 'test' ? 'TEST' : 'TRAINING'} OPTIONS</button></div>}
+    {isTraining && !paused && barOpen && <div className="training-bar" style={touchOn ? { bottom: 'auto', top: 54 } : undefined}>
+      <button className="tiny" onClick={() => setBarOpen(false)} title="Hide">✕</button>
       <span className="pix" style={{ fontSize: 8, color: 'var(--yellow)' }}>{spec.mode === 'test' ? 'TEST' : 'TRAINING'}</span>
       <select value={train.dummy} onChange={e => setTrain(t => ({ ...t, dummy: e.target.value as TrainingOptions['dummy'] }))} title="What the dummy does">
         <option value="stand">Dummy: Stand</option><option value="crouch">Dummy: Crouch</option><option value="jump">Dummy: Jump</option>

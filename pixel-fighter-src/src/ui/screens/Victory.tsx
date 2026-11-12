@@ -46,8 +46,10 @@ export function VictoryScreen({ result }: { result: MatchResult }) {
   return <div className="victory">
     <div className="col center">
       {w >= 0 ? <>
-        <Portrait def={winner} size={360} className="big-portrait" />
-        <div style={{ marginTop: -40 }}><AnimPreview def={winner} anim="victory" width={220} height={220} bg="transparent" /></div>
+        <div style={{ position: 'relative', width: '100%', maxWidth: 420 }}>
+          <Portrait def={winner} size={360} className="big-portrait" />
+          <div style={{ position: 'absolute', right: -30, bottom: -20, filter: 'drop-shadow(4px 4px 0 #000)' }}><AnimPreview def={winner} anim="victory" width={200} height={260} bg="transparent" /></div>
+        </div>
       </> : <div className="pix" style={{ fontSize: 40 }}>DRAW</div>}
     </div>
     <div className="col">

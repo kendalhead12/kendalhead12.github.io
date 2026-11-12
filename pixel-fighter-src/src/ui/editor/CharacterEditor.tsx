@@ -57,7 +57,9 @@ export function CharacterEditor({ id, session, setSession }: { id: string | null
     const clash = store.characters.find(c => c.id !== d.id && c.name.trim().toLowerCase() === d.name.trim().toLowerCase());
     if (clash) store.toast(`Note: another fighter is also called "${clash.name}" — dialogue matching uses names.`, true);
     try {
-      await store.saveCharacter(normalizeCharacter(deepClone(d)));
+      const out = normalizeCharacter(deepClone(d));
+      if (!out.portrait) { out.portrait = await portraitFromIdle(out).catch(() => ''); if (out.portrait) update(x => { x.portrait = out.portrait; }); }
+      await store.saveCharacter(out);
       setSession(s => s && ({ ...s, dirty: false }));
       store.toast(`Saved "${d.name}" — it's selectable now!`);
       audio.play('confirm');
@@ -122,6 +124,35 @@ function checklist(d: CharacterDef) {
   ];
 }
 
+
+/** Crop the upper body of the idle frame into a square portrait. */
+export async function portraitFromIdle(d: CharacterDef): Promise<string> {
+  const r = animFrame(d, 'idle', 0);
+  const sheet = r && d.sheets.find(s => s.id === r.sheet);
+  const fr = sheet?.frames[r!.index];
+  if (!sheet || !fr) return '';
+  const img = getImage(sheet.image) || await loadImage(sheet.image);
+  const [c, g] = makeCanvas(96, 96);
+  g.fillStyle = d.color; g.fillRect(0, 0, 96, 96);
+  g.fillStyle = 'rgba(255,255,255,.1)'; for (let i = -96; i < 96; i += 8) { g.beginPath(); g.moveTo(i, 96); g.lineTo(i + 96, 0); g.lineTo(i + 99, 0); g.lineTo(i + 3, 96); g.fill(); }
+  const crop = Math.min(fr.h, Math.max(fr.w, fr.h * 0.5));
+  const s = 96 / Math.max(fr.w * 0.9, crop * 0.9);
+  g.save(); g.translate(48, 0); if (d.facesLeft !== !!fr.flipX) g.scale(-1, 1);
+  g.drawImage(img, fr.x, fr.y, fr.w, crop, -fr.w * s / 2, 4, fr.w * s, crop * s); g.restore();
+  g.strokeStyle = '#000'; g.lineWidth = 3; g.strokeRect(1.5, 1.5, 93, 93);
+  return c.toDataURL('image/png');
+}
+
+/** Suggest a sprite scale that makes the idle frame roughly as tall as the built-in fighters (~125px). */
+export function suggestedScale(d: CharacterDef): number | null {
+  const r = animFrame(d, 'idle', 0) || (d.sheets[0]?.frames[0] ? { sheet: d.sheets[0].id, index: 0 } : null);
+  const sheet = r && d.sheets.find(s => s.id === r.sheet);
+  const fr = sheet?.frames[r!.index];
+  if (!fr) return null;
+  const h = Math.max(8, fr.oy);
+  return Math.max(0.5, Math.min(6, Math.round((125 / h) * 2) / 2));
+}
+
 // ---------------------------------------------------------------------------
 function CharacterPicker({ onOpen, onNew }: { onOpen: (c: CharacterDef) => void; onNew: () => void }) {
   const nav = useNav();
@@ -146,21 +177,7 @@ function BasicsTab({ d, update, issues, setTab }: { d: CharacterDef; update: Upd
   const [builder, setBuilder] = useState(false);
   const st = d.stats;
   const S = (k: keyof CharacterDef['stats']) => (v: number) => update(x => { x.stats = { ...x.stats, [k]: v }; });
-  const autoPortrait = async () => {
-    const r = animFrame(d, 'idle', 0);
-    const sheet = r && d.sheets.find(s => s.id === r.sheet);
-    const fr = sheet?.frames[r!.index];
-    if (!sheet || !fr) return;
-    const img = getImage(sheet.image) || await loadImage(sheet.image);
-    const [c, g] = makeCanvas(96, 96);
-    g.fillStyle = d.color; g.fillRect(0, 0, 96, 96);
-    const crop = Math.min(fr.h, Math.max(fr.w, fr.h * 0.5));
-    const s = 96 / Math.max(fr.w * 0.9, crop * 0.9);
-    g.save(); g.translate(48, 0); if (d.facesLeft !== !!fr.flipX) g.scale(-1, 1);
-    g.drawImage(img, fr.x, fr.y, fr.w, crop, -fr.w * s / 2, 4, fr.w * s, crop * s); g.restore();
-    g.strokeStyle = '#000'; g.lineWidth = 3; g.strokeRect(1.5, 1.5, 93, 93);
-    update(x => { x.portrait = c.toDataURL('image/png'); });
-  };
+  const autoPortrait = async () => { const u = await portraitFromIdle(d); if (u) update(x => { x.portrait = u; }); };
   return <div className="split" style={{ gridTemplateColumns: 'minmax(260px, 340px) 1fr' }}>
     <div className="col">
       <div className="panel col">
@@ -210,6 +227,7 @@ function BasicsTab({ d, update, issues, setTab }: { d: CharacterDef; update: Upd
           const r = animFrame(d, 'idle', 0); const sh = r && d.sheets.find(s => s.id === r.sheet); const fr = sh?.frames[r!.index];
           if (fr) update(x => { x.stats = { ...x.stats, height: Math.round(fr.oy * x.scale * 0.92), width: Math.round(Math.min(fr.w, fr.h * 0.4) * x.scale * 0.6) }; });
         }} disabled={!d.animations.idle?.frames.length}>AUTO-FIT BODY FROM IDLE FRAME</button>
+        {(() => { const sc = suggestedScale(d); return sc && Math.abs(sc - d.scale) >= 0.5 ? <div className="notice info">Your sprites look {sc > d.scale ? 'small' : 'large'} next to the built-in fighters. <button className="tiny gold" onClick={() => update(x => { x.scale = sc; })}>USE {sc}× SCALE</button></div> : null; })()}
       </div>
     </div>
     {builder && <BodyBuilder d={d} update={update} onClose={() => setBuilder(false)} />}

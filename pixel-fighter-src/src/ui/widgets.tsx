@@ -81,8 +81,8 @@ export function AnimPreview({ def, anim, frames, fps = 10, loop = true, width = 
       const c = ref.current; if (!c) return;
       const g = c.getContext('2d')!;
       g.imageSmoothingEnabled = false;
-      g.fillStyle = bg; g.fillRect(0, 0, c.width, c.height);
-      g.fillStyle = 'rgba(255,255,255,.12)'; g.fillRect(0, c.height - 14, c.width, 1);
+      g.clearRect(0, 0, c.width, c.height);
+      if (bg !== 'transparent') { g.fillStyle = bg; g.fillRect(0, 0, c.width, c.height); g.fillStyle = 'rgba(255,255,255,.12)'; g.fillRect(0, c.height - 14, c.width, 1); }
       let ref2: FrameRef | null = null;
       if (frames) {
         if (frames.length) {
@@ -100,7 +100,7 @@ export function AnimPreview({ def, anim, frames, fps = 10, loop = true, width = 
     raf = requestAnimationFrame(draw);
     return () => cancelAnimationFrame(raf);
   }, [def, anim, frames, fps, loop, bg, scale, playing]);
-  return <canvas ref={ref} width={width} height={height} style={{ background: bg, boxShadow: '0 0 0 2px #000' }} />;
+  return <canvas ref={ref} width={width} height={height} style={bg === 'transparent' ? undefined : { background: bg, boxShadow: '0 0 0 2px #000' }} />;
 }
 
 export function Portrait({ def, size = 64, className }: { def: CharacterDef; size?: number; className?: string }) {

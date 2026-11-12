@@ -8,6 +8,7 @@ import { AnimPreview, Check, Field, FileButton, FrameThumb, Modal, Num } from '.
 import { FramePicker } from './common';
 import { resolveAnim } from '../../engine/sim';
 import { useStore } from '../store';
+import { suggestedScale } from './CharacterEditor';
 
 // ============================================================================
 // Image analysis helpers
@@ -156,6 +157,7 @@ export function SpritesTab({ d, update }: { d: CharacterDef; update: Update }) {
 type Tool = 'select' | 'draw' | 'origin' | 'pick';
 
 function SheetEditor({ d, sheet, update, usedBy, onDelete }: { d: CharacterDef; sheet: SpriteSheet; update: Update; usedBy: number; onDelete: () => void }) {
+  const store = useStore();
   const [zoom, setZoom] = useState(() => Math.max(1, Math.min(4, Math.floor(900 / Math.max(1, sheet.width)))));
   const [tool, setTool] = useState<Tool>('select');
   const [sel, setSel] = useState(0);
@@ -251,8 +253,19 @@ function SheetEditor({ d, sheet, update, usedBy, onDelete }: { d: CharacterDef; 
     const { data } = await sheetData(sheet);
     const f = sliceGrid(data, grid);
     setFrames(append ? [...sheet.frames, ...f] : f); setSel(append ? sheet.frames.length : 0);
+    if (!append) autoSize(f);
   };
-  const detect = async () => { const { data } = await sheetData(sheet); const f = autoDetect(data, gap, minSize); setFrames(f); setSel(0); };
+  const autoSize = (frames: FrameRect[]) => {
+    // first slice of a brand-new character: pick a scale that matches the built-in fighters
+    if (d.scale !== 1 || Object.values(d.animations).some(a => a.frames.length) || !frames.length) return;
+    const hs = frames.map(f => f.oy).sort((a, b) => a - b);
+    const med = hs[Math.floor(hs.length / 2)];
+    const sc = Math.max(1, Math.min(6, Math.round(125 / Math.max(8, med))));
+    const ws = frames.map(f => f.w).sort((a, b) => a - b);
+    update(x => { x.scale = sc; x.stats = { ...x.stats, height: Math.round(med * sc * 0.95), width: Math.round(Math.min(ws[Math.floor(ws.length / 2)] * 0.6, med * 0.35) * sc) }; });
+    store.toast(`Sprite scale set to ${sc}× and body size fitted — change it on Basics if needed.`);
+  };
+  const detect = async () => { const { data } = await sheetData(sheet); const f = autoDetect(data, gap, minSize); setFrames(f); setSel(0); autoSize(f); };
   const trimAll = async (only?: number) => {
     const { data } = await sheetData(sheet);
     setFrames(sheet.frames.map((f, i) => {
