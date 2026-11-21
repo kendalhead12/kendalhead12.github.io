@@ -94,13 +94,13 @@
     b.isl(91, 12, 10, 14, T.ALT);
     b.e('flybot', 95, 6);
     // GRAVITY CHAMBER: flip and walk on the ceiling over a spike pit
-    b.r(101, 2, 40, 2, T.ALT); b.r(101, 22, 40, 4, T.ALT); b.r(101, 21, 40, 1, T.SPIKE);
-    b.o('gravsw', 103, 10, {});
+    b.r(91, 2, 50, 2, T.ALT); b.r(101, 22, 40, 4, T.ALT); b.r(101, 21, 40, 1, T.SPIKE);
+    b.o('gravsw', 101, 10, {});
     b.deco('sign', 100, 11, { txt: 'GRAVITY' });
     b.r(108, 4, 2, 1, T.SPIKED); b.r(118, 4, 2, 1, T.SPIKED); b.r(128, 4, 2, 1, T.SPIKED);
     b.coins(112, 4, 4).coins(122, 4, 4);
     b.e('wisp', 115, 10);
-    b.o('gravsw', 137, 8, { set: 1 });
+    b.o('gravsw', 137, 5, { set: 1 });
     b.isl(136, 12, 5, 1, T.ALT);
     b.isl(141, 12, 12, 14, T.ALT);
     b.o('check', 144, 11);
@@ -123,7 +123,7 @@
     b.e('flybot', 210, 7).e('ldrone', 220, 7, { span: 3 });
     for (let i = 0; i < 3; i++) b.o('hazard', 214 + i * 8, 5, { kind: 'lightning', w: 2, h: 7, per: 140, on: 20, warn: 50, off: i * 45 });
     // medal 3: fortress tower top (via gravity flip near the end)
-    b.o('gravsw', 234, 9, { set: -1 }); b.medal(238, 5); b.o('gravsw', 239, 6, { set: 1 });
+    b.o('gravsw', 234, 10, { set: -1 }); b.medal(238, 5); b.o('gravsw', 239, 6, { set: 1 });
     b.o('goal', 244, 11);
     b.talkStart = [{ who: 'achmed', text: 'My Storm Fortress! Lightning, wind, and GRAVITY bend to my will!', mood: 'laugh' }, { who: 'aaron', text: 'Gravity bends to you? Is that why your hair fell out?', mood: 'grin' }];
     return b.done();
@@ -168,7 +168,11 @@
     b.o('hazard', 20, 10, { kind: 'laser', dir: 'h', per: 140, on: 60, ch: 'sec1' }); b.t(19, 10, T.ALT);
     b.e('lturret', 28, 3, { ceil: true });
     b.ground(31, 60, G);
-    b.e('guard', 40, G - 1);
+    // chemical vats: acid pit crossed on robotic platforms
+    b.clear(33, G, 6, 6); b.ground(33, 38, 23); b.liquid(33, 20, 6, 3, 'acid');
+    b.o('plat', 33, G - 1, { kind: 'path', w: 2, style: 'tech', path: [[4, 0]], speed: .7, wait: 30 });
+    b.deco('tube', 31, G - 1, { v: 1 });
+    b.e('guard', 44, G - 1);
     // security terminal lever (behind the guard) shuts down grid #2
     b.o('switch', 48, G - 1, { kind: 'lever', ch: 'sec2' });
     b.deco('computer', 50, G - 1);
@@ -265,7 +269,7 @@
     b.r(224, 3, 30, 1, T.ALT); b.r(224, 25, 30, 1, T.SPIKE);
     b.r(230, 4, 2, 1, T.SPIKED); b.r(240, 4, 2, 1, T.SPIKED);
     b.e('lturret', 235, 23);
-    b.o('gravsw', 251, 6, { set: 1 });
+    b.o('gravsw', 251, 4, { set: 1 });
     b.isl(250, 9, 4, 1, T.ALT);
     // artifact: on the gravity ceiling side room
     b.r(244, 1, 4, 2, T.BGWALL); b.clear(245, 3, 2, 1); b.o('artifact', 246, 1);

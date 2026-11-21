@@ -59,7 +59,7 @@
       if (this.landT > 0) this.landT--;
       if (this.frozen > 0) { this.frozen--; return; }
       if (this.state === 'dead') return this.updDead();
-      if (this.locked) { this.physicsLocked(); return; }
+      if (this.locked || this.introLocked) { this.physicsLocked(); return; }
 
       // input buffering
       if (I.pressed.jump) this.jumpBuf = C.buffer; else if (this.jumpBuf > 0) this.jumpBuf--;
@@ -152,6 +152,7 @@
       const pvy = this.vy;
       AF.moveBody(this, lv);
       if (this.hitWall === 0) this.vx = ox; else this.vx = 0;
+      if (this.pushedEnt) { this.vx = AF.sign(ox) * Math.min(Math.abs(ox), .95); this.pushedEnt = null; }
       if (this.onGround && !wasG) {
         this.djumpUsed = false; this.airDashUsed = false;
         if (pvy * this.grav > 3.6) { this.landT = 6; AF.Audio.sfx('land'); AF.fx.dust(this.g, this.cx, this.feetY, 5, this.g.dustCol); }
@@ -237,7 +238,7 @@
       if (I.pressed.jump) {
         const z = this.g.lv.liquidAt(this.cx, this.cy);
         const nearTop = z && (this.grav > 0 ? (this.cy - z.top) < 14 : false);
-        if (nearTop) { this.vy = -C.swExit * this.grav; this.swimming = false; this.leapT = 14; this.jumpCut = false; AF.Audio.sfx('splash'); AF.fx.splash(g, this.cx, z.top); this.y -= 2; }
+        if (nearTop) { this.vy = -C.swExit * this.grav; this.swimming = false; this.leapT = 14; this.jumpCut = false; this.jumpBuf = 0; this.djumpUsed = false; AF.Audio.sfx('splash'); AF.fx.splash(g, this.cx, z.top); this.y -= 2; }
         else { const ang = Math.atan2(dy || (dx ? 0 : -1), dx || 0); this.vx += Math.cos(ang) * C.swStroke * .6; this.vy += Math.sin(ang) * C.swStroke * .9; this.spinT = 0; AF.Audio.sfx('bubble'); for (let i = 0; i < 3; i++) AF.fx.bubble(g, this.cx + this.facing * 6, this.y + 6); }
       }
       if (I.pressed.attack) { if (this.startAttack()) return; }
@@ -311,7 +312,7 @@
           const pts = e.points();
           for (let i = 2; i < pts.length; i++) {
             const p = pts[i];
-            if (Math.abs(p.x - this.cx) < 8 && Math.abs(p.y - (this.y + 4)) < 10) {
+            if (p.x > this.x - 7 && p.x < this.x + this.w + 7 && p.y > this.y - 8 && p.y < this.y + 20) {
               this.swing = e; this.state = 'swing'; e.grab(this, i / (pts.length - 1)); this.vx = 0; this.vy = 0; AF.Audio.sfx('land'); return;
             }
           }

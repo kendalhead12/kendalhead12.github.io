@@ -30,8 +30,8 @@
       if (s === ignore || s === b || !s.solid || s.oneWay || s.dead) continue;
       if (!AF.rectsHit(b.x, b.y, b.w, b.h, s.x, s.y, s.w, s.h)) continue;
       // only collide if we were not already inside (prevents snapping)
-      if (dx > 0 && b.x + b.w - dx <= s.x + EPS + .5) { b.x = s.x - b.w; hit = true; if (s.onPushed) s.onPushed(b, 1); }
-      else if (dx < 0 && b.x - dx >= s.x + s.w - EPS - .5) { b.x = s.x + s.w; hit = true; if (s.onPushed) s.onPushed(b, -1); }
+      if (dx > 0 && b.x + b.w - dx <= s.x + EPS + .5) { b.x = s.x - b.w; hit = true; if (s.onPushed) { s.onPushed(b, 1); b.pushedEnt = s; } }
+      else if (dx < 0 && b.x - dx >= s.x + s.w - EPS - .5) { b.x = s.x + s.w; hit = true; if (s.onPushed) { s.onPushed(b, -1); b.pushedEnt = s; } }
     }
     if (hit) { b.vx = 0; b.hitWall = dx > 0 ? 1 : -1; }
     return hit;

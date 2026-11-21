@@ -72,7 +72,7 @@
     b.e('beetle', 133, G - 1);
     // --- vine swing over gap (lower cave path if you fall)
     b.ground(137, 147, 20);
-    b.o('rope', 141, 5, { len: 6, amp: .75 });
+    b.o('rope', 141, 5, { len: 7, amp: .75 });
     b.coins(138, 19, 8);
     b.e('thorn', 142, 19);
     b.o('orb', 144, 18);
@@ -185,7 +185,9 @@
     b.medal(215, 15); b.o('mushroom', 212, 15, { behind: 1 });
     b.o('plat', 219, 12, { kind: 'sine', w: 3, style: 'log', ay: 1.5, per: 170 });
     b.isl(224, 11, 26, 19);
-    b.e('beetle', 230, 10).e('wasp', 234, 6);
+    b.e('beetle', 228, 10).e('wasp', 234, 6);
+    // secret artifact: a fake patch of canopy hides a pocket
+    b.t(232, 11, T.SECRET); b.r(232, 12, 3, 2, T.SECRET); b.o('artifact', 234, 13);
     b.deco('bush', 236, 10);
     b.o('goal', 241, 10);
     b.talkStart = [{ who: 'aaron', text: 'Up in the treetops... and the robot bugs followed me here, too!', mood: 'n' }];
@@ -211,7 +213,7 @@
     // medal 2: breakable stump wall hiding a nook
     b.r(54, 11, 3, 4, T.ALT); b.r(54, 12, 2, 3, T.BREAK); b.clear(56, 12, 1, 3); b.medal(55, 13);
     b.coins(58, G - 1, 4);
-    b.o('rope', 68, 5, { len: 6, amp: .75 });
+    b.o('rope', 68, 5, { len: 7, amp: .75 });
     b.ground(65, 74, 20);
     b.ladder(75, G, 5, true);
     // medal 3 below the swing in the gully
@@ -306,7 +308,7 @@
     b.deco('computer', 5, G - 1).deco('sign', 9, G - 1, { txt: 'PUZZLES' });
     // PUZZLE 1: button opens door (stand on it / push crate onto it)
     b.o('crate', 12, G - 1);
-    b.o('switch', 16, G - 1, { kind: 'button', ch: 'd1', momentary: true });
+    b.o('switch', 16, G - 1, { kind: 'button', ch: 'd1', momentary: true }); b.t(17, G - 1, T.ALT);
     b.r(19, 0, 1, G - 3, T.SOLID);
     b.o('door', 19, G - 3, { ch: 'd1', h: 3 });
     b.ground(19, 40, G);

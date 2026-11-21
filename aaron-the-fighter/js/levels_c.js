@@ -241,7 +241,7 @@
     b.o('sun', 20, 10, { dir: [1, 0] });
     b.r(19, 11, 3, 1, T.ALT);
     b.o('mirror', 26, 10, { o: 0 });   // punch it so it becomes '\' and sends the beam down
-    b.isl(23, 13, 3, 1, T.ALT);
+    b.isl(23, 12, 3, 1, T.ALT); b.isl(20, 16, 2, 1, T.ALT);
     b.o('mirror', 26, 19, { recv: true, ch: 'g1' });
     b.r(31, 3, 1, G - 6, T.ALT); b.o('door', 31, G - 3, { ch: 'g1', h: 3 });
     b.ground(31, 60, G, T.ALT);

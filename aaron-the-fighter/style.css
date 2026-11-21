@@ -19,3 +19,5 @@ body{background:radial-gradient(ellipse at center,#1a1c48 0%,#0a0a24 60%,#05050f
 #b-pause{left:50%;top:calc(6px + env(safe-area-inset-top));transform:translateX(-50%);width:44px;height:30px;border-radius:10px;font-size:13px}
 #tap{position:fixed;left:0;right:0;bottom:30%;text-align:center;font:bold 18px monospace;color:#fff;text-shadow:0 2px 0 #000;z-index:6;animation:blink 1s infinite}
 @keyframes blink{50%{opacity:.3}}
+@media (orientation:portrait){#b-pause{top:auto;bottom:calc(200px + env(safe-area-inset-bottom));left:50%}}
+@media (orientation:landscape){#b-pause{left:calc(12px + env(safe-area-inset-left));top:calc(10px + env(safe-area-inset-top));transform:none}}

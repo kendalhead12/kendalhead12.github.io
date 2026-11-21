@@ -429,7 +429,7 @@
       const g = this.g;
       if (this.kind === 'button') {
         let pressed = false;
-        for (const b of g.bodies) if (!b.dead && b !== this && AF.rectsHit(b.x, b.y + b.h - 2, b.w, 4, this.x + 2, this.y, this.w - 4, 4)) pressed = true;
+        for (const b of g.bodies) if (!b.dead && b !== this && b.grav !== -1 && AF.rectsHit(b.x, b.y + b.h - 4, b.w, 6, this.x + 2, this.y, this.w - 4, this.h)) pressed = true;
         if (pressed && !this.on) { this.on = true; AF.Audio.sfx('switch'); g.setSig(this.ch, true); }
         if (!pressed && this.on && this.p_momentary) { this.on = false; g.setSig(this.ch, false); }
       }

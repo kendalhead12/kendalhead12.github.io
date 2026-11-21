@@ -147,8 +147,7 @@
       if (this.screenFlash > 0) this.screenFlash--;
       if (this.flashEnergy > 0) this.flashEnergy--;
       const p = this.player;
-      p.locked = p.locked || (this.intro > 30);
-      if (this.intro === 30) p.locked = false;
+      p.introLocked = this.intro > 30;
       if (this.intro <= 20 && this.pendingTalk) { const tk = this.pendingTalk; this.pendingTalk = null; this.talk(tk); }
       // entities first (platforms move & carry), then player
       for (let i = 0; i < this.ents.length; i++) { const e = this.ents[i]; if (!e.dead) e.update(); }
