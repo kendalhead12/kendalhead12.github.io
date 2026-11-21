@@ -1,0 +1,186 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Chaos Sandbox</title>
+<link rel="stylesheet" href="style.css?v=1">
+<script type="importmap">
+{ "imports": { "three": "./lib/three.module.min.js", "rapier": "./lib/rapier.es.js" } }
+</script>
+</head>
+<body>
+<div id="game"></div>
+
+<!-- HUD -->
+<div id="hud">
+  <div id="crosshair"><i></i><i></i><i></i><i></i></div>
+  <div id="vignette"></div>
+  <div id="scope" class="hidden"><div class="lens"></div></div>
+  <div id="hpBox"><div class="hpLabel">HEALTH</div><div class="hpBar"><div id="hpFill"></div></div><div id="hpNum">100</div></div>
+  <div id="weaponBox"><div id="wName"></div><div id="ammo"></div><div id="toolName"></div></div>
+  <div id="spawnSel"></div>
+  <div id="invBar"></div>
+  <div id="holdHint"></div>
+  <div id="timeInd"></div>
+  <div id="stats"></div>
+  <div id="toasts"></div>
+  <div id="deathScreen" class="hidden"><div class="big">YOU DIED</div><div id="deathBy"></div><div class="small">Respawning…</div></div>
+</div>
+
+<!-- Main menu -->
+<div id="mainMenu" class="screen">
+  <div class="menuCard">
+    <div class="logo">CHAOS<span>SANDBOX</span></div>
+    <div class="tag">A 3D physics playground: spawn people, zombies, monsters, props and vehicles, and see what happens.</div>
+    <button id="btnPlay" class="btn big">Play</button>
+    <button id="btnMainLoad" class="btn">Load Save</button>
+    <button id="btnMainSettings" class="btn">Settings</button>
+    <button id="btnMainHelp" class="btn">Controls</button>
+    <div id="bootStatus" class="muted">Loading engine…</div>
+    <div class="contentNote">Contains cartoon violence and optional stylized blood (can be turned off in Settings → Effects).</div>
+  </div>
+</div>
+
+<!-- Map selection -->
+<div id="mapMenu" class="screen hidden">
+  <div class="panel wide">
+    <h2>Choose a map</h2>
+    <div id="mapGrid"></div>
+    <div class="btnRow"><button id="btnMapBack" class="btn">Back</button></div>
+  </div>
+</div>
+
+<!-- Spawn menu -->
+<div id="spawnMenu" class="screen hidden overlay">
+  <div class="spawnWrap">
+    <div class="spawnSide">
+      <div class="spawnLogo">SPAWN</div>
+      <div id="spawnCats"></div>
+      <div class="sideSep"></div>
+      <button class="sideAct" id="actUndo">↶ Undo (Z)</button>
+      <button class="sideAct" id="actFreeze">❄ Freeze all</button>
+      <button class="sideAct" id="actClearDead">⌫ Clear bodies</button>
+      <button class="sideAct" id="actClearNpc">✖ Clear creatures</button>
+      <button class="sideAct" id="actClearProps">✖ Clear props</button>
+      <button class="sideAct" id="actReset">⟲ Reset map</button>
+      <button class="sideAct" id="actSave">💾 Save / Load</button>
+      <button class="sideAct" id="actSettings">⚙ Settings</button>
+    </div>
+    <div class="spawnMain">
+      <div class="spawnTop">
+        <div id="spawnTitle">Humans</div>
+        <input id="spawnSearch" type="search" placeholder="Search everything…" autocomplete="off">
+        <button class="btn small" id="actClose">Close (Q)</button>
+      </div>
+      <div id="spawnGrid"></div>
+    </div>
+  </div>
+</div>
+
+<!-- Pause -->
+<div id="pauseMenu" class="screen hidden">
+  <div class="menuCard">
+    <div class="logo small">PAUSED</div>
+    <button id="btnResume" class="btn big">Resume</button>
+    <button id="btnPauseSpawn" class="btn">Spawn Menu</button>
+    <button id="btnPauseSave" class="btn">Save / Load</button>
+    <button id="btnPauseSettings" class="btn">Settings</button>
+    <button id="btnPauseMap" class="btn">Change Map</button>
+    <button id="btnPauseHelp" class="btn">Controls</button>
+    <button id="btnPauseMain" class="btn">Main Menu</button>
+  </div>
+</div>
+
+<!-- Settings -->
+<div id="settingsPanel" class="screen hidden">
+  <div class="panel">
+    <h2>Settings</h2>
+    <div id="settingsTabs"></div>
+    <div id="settingsBody"></div>
+    <div class="btnRow"><button id="btnSettingsReset" class="btn">Reset to defaults</button><button id="btnSettingsClose" class="btn primary">Done</button></div>
+  </div>
+</div>
+
+<!-- Faction editor -->
+<div id="factionPanel" class="screen hidden">
+  <div class="panel">
+    <h2>Faction Editor</h2>
+    <p class="muted">Click a cell to cycle friendly → neutral → hostile. Each row is how that faction treats each column.</p>
+    <table id="factionTable"></table>
+    <div class="btnRow"><button id="btnFactionReset" class="btn">Reset</button><button id="btnFactionClose" class="btn primary">Done</button></div>
+  </div>
+</div>
+
+<!-- Time controller -->
+<div id="timePanel" class="screen hidden">
+  <div class="panel small">
+    <h2>Time Controller</h2>
+    <div class="bigVal" id="timeVal">1.00×</div>
+    <input id="timeSlider" type="range" min="0" max="3" step="0.05">
+    <div class="btnRow wrap">
+      <button class="btn" data-speed="0.1">0.1×</button><button class="btn" data-speed="0.25">0.25×</button><button class="btn" data-speed="0.5">0.5×</button>
+      <button class="btn" data-speed="1">1×</button><button class="btn" data-speed="2">2×</button><button class="btn" data-speed="3">3×</button>
+    </div>
+    <div class="btnRow"><button id="btnTimePause" class="btn">Pause / Resume (P)</button><button id="btnTimeClose" class="btn primary">Done</button></div>
+    <p class="muted">Shortcuts: T toggles slow motion, P pauses the simulation, Tab opens this panel.</p>
+  </div>
+</div>
+
+<!-- NPC spawner config -->
+<div id="spawnerPanel" class="screen hidden">
+  <div class="panel small">
+    <h2>NPC Spawner</h2>
+    <div class="setRow"><div class="setLabel">Creature</div><select id="spawnerCreature"></select></div>
+    <div class="setRow"><div class="setLabel">Interval</div><div class="slider"><input id="spawnerInterval" type="range" min="1" max="30" step="1" value="6"><span class="val" id="spawnerIntervalVal">6s</span></div></div>
+    <div class="setRow"><div class="setLabel">Max alive per spawner</div><div class="slider"><input id="spawnerMax" type="range" min="1" max="30" step="1" value="8"><span class="val" id="spawnerMaxVal">8</span></div></div>
+    <p class="muted">With the Tool Gun: LMB places a spawner pad, RMB removes the nearest one. The global population limit still applies.</p>
+    <div class="btnRow"><button id="btnSpawnerClose" class="btn primary">Done</button></div>
+  </div>
+</div>
+
+<!-- Health editor -->
+<div id="healthPanel" class="screen hidden">
+  <div class="panel small">
+    <h2>Health Editor</h2>
+    <div id="healthBody"></div>
+    <div class="btnRow"><button id="btnHealthClose" class="btn primary">Done</button></div>
+  </div>
+</div>
+
+<!-- Saves -->
+<div id="savePanel" class="screen hidden">
+  <div class="panel">
+    <h2>Save / Load</h2>
+    <div id="saveNewRow" class="btnRow"><input id="saveName" type="text" placeholder="Save name" maxlength="40"><button id="btnSaveNew" class="btn primary">Save current scene</button></div>
+    <div id="saveList"></div>
+    <div class="btnRow"><button id="btnSavesClose" class="btn">Close</button></div>
+  </div>
+</div>
+
+<!-- Help -->
+<div id="helpPanel" class="screen hidden">
+  <div class="panel">
+    <h2>Controls</h2>
+    <div class="helpGrid">
+      <div><b>WASD</b> Move</div><div><b>Mouse</b> Look</div>
+      <div><b>Left click</b> Attack / shoot / use tool</div><div><b>Right click</b> Aim / secondary</div>
+      <div><b>Space</b> Jump</div><div><b>Shift</b> Sprint</div>
+      <div><b>E</b> Pick up / drop object</div><div><b>G</b> Drop held object</div>
+      <div><b>Q</b> Spawn menu</div><div><b>R</b> Reload (Physics Gun: unfreeze / hold to rotate)</div>
+      <div><b>F</b> Interact, drive, talk, leave possession</div><div><b>ESC</b> Pause & settings</div>
+      <div><b>1–7 / wheel</b> Switch weapon</div><div><b>V</b> Noclip (fly)</div>
+      <div><b>C</b> Free camera</div><div><b>Z</b> Undo last spawn</div>
+      <div><b>T</b> Slow motion</div><div><b>P</b> Pause simulation</div>
+      <div><b>Tab</b> Time controller</div><div><b>H</b> This help</div>
+    </div>
+    <p class="muted">Spawning: open the spawn menu (Q), pick a creature, prop or vehicle, then left-click anywhere to place it. Keep clicking to place more; right-click stops. Weapons go straight into your inventory, and tools load into the Tool Gun.</p>
+    <div class="btnRow"><button id="btnHelpClose" class="btn primary">Got it</button></div>
+  </div>
+</div>
+
+<div id="loading" class="screen hidden"><div class="spinner"></div><div id="loadingText">Loading…</div></div>
+
+<script type="module" src="js/main.js?v=1"></script>
+</body>
+</html>
