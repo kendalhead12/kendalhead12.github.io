@@ -54,12 +54,13 @@
     }
     // ---------------- geometry ----------------
     genR(i) { return R(this.bx + (i ? this.bw - 14 : -2), this.by + 52, 16, 16); }
+    genHit(i) { return R(this.bx + (i ? this.bw - 18 : -6), this.by + 50, 24, this.floorY - this.by - 54); }
     coreR() { return R(this.mx + 55, this.my + 50, 22, 22); }
     capR() { return R(this.cx2 - 16, this.cy2 - 14, 32, 28); }
     weak() {
       if (this.trans) return [];
-      if (this.phase === 1) return [0, 1].filter(i => this.gens[i] > 0).map(i => Object.assign(this.genR(i), { gen: i }));
-      if (this.phase === 2) return this.state === 'stunned2' || this.coreOpen ? [this.coreR()] : [];
+      if (this.phase === 1) return [0, 1].filter(i => this.gens[i] > 0).map(i => Object.assign(this.genHit(i), { gen: i }));
+      if (this.phase === 2) return this.state === 'stunned2' || this.coreOpen ? [R(this.mx + 50, this.my + 46, 32, 30)] : [];
       return [this.capR()].concat([]);
     }
     armor() {

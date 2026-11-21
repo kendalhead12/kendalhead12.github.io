@@ -98,7 +98,9 @@
       for (const r of this.weak()) if (AF.rectsHit(b.x, b.y, b.w, b.h, r.x, r.y, r.w, r.h) && (!r.fromAbove || b.down || b.kind === 'kick' || b.kind === 'stomp' || b.y + b.h < r.y + 10)) {
         this.lastHits[b.id] = 1; this.damage(b.dmg * (r.mult || 1), b, r); return true;
       }
+      const openNow = this.weak().length > 0;
       for (const r of this.armor()) if (AF.rectsHit(b.x, b.y, b.w, b.h, r.x, r.y, r.w, r.h)) {
+        if (openNow && !this.armorHit) { if (!this.clinkT || this.t - this.clinkT > 20) { this.clinkT = this.t; AF.Audio.sfx('clink'); } return false; }
         this.lastHits[b.id] = 1;
         if (this.armorHit && this.armorHit(b, r)) return true;
         AF.Audio.sfx('clink'); AF.fx.hit(this.g, AF.clamp(b.x + b.w / 2, r.x, r.x + r.w), AF.clamp(b.y + b.h / 2, r.y, r.y + r.h));
@@ -115,7 +117,8 @@
       if (this.hp <= 0) { this.hp = 0; this.die(); return; }
       if (!this.enraged && this.hp <= this.maxHp / 2) { this.enraged = true; this.onEnrage && this.onEnrage(); }
     }
-    touch(p) { if (this.dying || !this.active) return; for (const r of this.hurts()) if (AF.rectsHit(p.x, p.y, p.w, p.h, r.x, r.y, r.w, r.h)) { p.hurt(this.contactDmg, r.x + r.w / 2); break; } }
+    soft() { return false; }
+    touch(p) { if (this.dying || !this.active || this.soft()) return; for (const r of this.hurts()) if (AF.rectsHit(p.x, p.y, p.w, p.h, r.x, r.y, r.w, r.h)) { p.hurt(this.contactDmg, r.x + r.w / 2); break; } }
     die() {
       const g = this.g;
       this.dying = 1; AF.Audio.stopMusic(); AF.Audio.sfx('bossdie'); g.hitstop = 24; g.cam.shake(5, 60);
@@ -191,8 +194,9 @@
         coreO: coreImg(true, '#40e0ff'), coreC: coreImg(false)
       }));
     }
-    coreR() { return R(this.bx + 25, this.by + 74, 16, 16); }
+    coreR() { return this.coreOpen ? R(this.bx + 4, this.floorY - 30, 22, 26) : R(this.bx + 25, this.by + 74, 16, 16); }
     weak() { return this.coreOpen ? [this.coreR()] : []; }
+    soft() { return this.coreOpen; }
     armor() { return [R(this.bx + 12, this.by + 10, 44, this.bh - 10)]; }
     hurts() {
       const r = this.coreOpen ? [R(this.bx + 30, this.by + 20, 22, this.bh - 20)] : [R(this.bx + 16, this.by + 20, 36, this.bh - 20)];
@@ -250,9 +254,16 @@
       }
       this.drawPart(ctx, a.canopy, this.bx - 20, this.by - 10 + sway, cx, cy);
       this.drawPart(ctx, a.face, this.bx + 17, this.by + 34, cx, cy);
-      const c = this.coreR();
-      this.drawPart(ctx, this.coreOpen ? a.coreO : a.coreC, c.x - 1, c.y - 1, cx, cy);
-      if (this.coreOpen && (t & 8)) { ctx.globalAlpha = .3; ctx.fillStyle = '#80f0ff'; ctx.beginPath(); ctx.arc(Math.round(c.x + 8 - cx), Math.round(c.y + 8 - cy), 14, 0, 7); ctx.fill(); ctx.globalAlpha = 1; }
+      if (this.coreOpen) {
+        // core pops out of the trunk on a piston, down at punching height
+        const ccx = this.bx + 15, ccy = this.floorY - 17;
+        this.drawPart(ctx, a.coreC, this.bx + 25, this.by + 74, cx, cy);
+        ctx.fillStyle = '#140a18'; ctx.fillRect(Math.round(ccx - cx), Math.round(ccy - 3 - cy), Math.round(this.bx + 30 - ccx), 7);
+        ctx.fillStyle = '#8a92a8'; ctx.fillRect(Math.round(ccx - cx), Math.round(ccy - 2 - cy), Math.round(this.bx + 30 - ccx), 5);
+        this.drawPart(ctx, a.coreO, ccx - 9, ccy - 9, cx, cy);
+        if (t & 8) { ctx.globalAlpha = .3; ctx.fillStyle = '#80f0ff'; ctx.beginPath(); ctx.arc(Math.round(ccx - cx), Math.round(ccy - cy), 15, 0, 7); ctx.fill(); ctx.globalAlpha = 1; }
+        if (t & 16) AF.text(ctx, 'v', Math.round(ccx - cx), Math.round(ccy - 26 - cy), '#80f0ff', { a: 'c' });
+      } else { const c = this.coreR(); this.drawPart(ctx, a.coreC, c.x - 1, c.y - 1, cx, cy); }
       if (this.state === 'slam' && this.st < 45 && (t & 4)) { ctx.fillStyle = '#ff4040'; ctx.fillRect(Math.round(this.bx + 10 - this.armTarget - cx) - 8, Math.round(this.floorY - cy) - 2, 16, 2); }
     }
   }
@@ -363,7 +374,8 @@
       }));
     }
     crystalR() { return R(this.bx + 22, this.by + 30, 14, 16); }
-    weak() { return this.exposed > 0 ? [this.crystalR()] : []; }
+    weak() { return this.exposed > 0 ? [R(this.bx + 2, this.by + 26, this.bw - 4, this.bh - 34)] : []; }
+    soft() { return this.exposed > 0; }
     armor() { return [R(this.bx + 4, this.by, this.bw - 8, this.bh)]; }
     armorHit(b) {
       if (this.exposed > 0) return false;
@@ -450,7 +462,8 @@
     }
     ventR(i) { return R(this.bx + (i ? this.bw - 18 : 2), this.by + 2, 16, 12); }
     coreR() { return R(this.bx + 25, this.by + 28, 18, 18); }
-    weak() { if (this.overheat > 0) return [this.coreR()]; const r = []; for (let i = 0; i < 2; i++) if (this.vents[i] > 0) r.push(Object.assign(this.ventR(i), { vent: i })); return r; }
+    soft() { return this.overheat > 0; }
+    weak() { if (this.overheat > 0) return [R(this.bx + 2, this.by + 24, this.bw - 4, this.bh - 30)]; const r = []; for (let i = 0; i < 2; i++) if (this.vents[i] > 0) r.push(Object.assign(this.ventR(i), { vent: i })); return r; }
     damage(n, b, r) {
       if (r && r.vent !== undefined) {
         this.vents[r.vent] -= 1; this.flash = 8; AF.Audio.sfx('break'); AF.fx.hit(this.g, r.x + 8, r.y + 6, true); this.g.hitstop = 4;
@@ -535,7 +548,8 @@
       }));
     }
     coreR() { return R(this.bx + 15, this.by + 22, 18, 18); }
-    weak() { return this.exposed > 0 ? [this.coreR()] : []; }
+    weak() { return this.exposed > 0 ? [R(this.bx - 2, this.by + 18, this.bw + 4, this.bh - 22)] : []; }
+    soft() { return this.exposed > 0; }
     armor() { return [R(this.bx, this.by, this.bw, this.bh)]; }
     armorHit(b) {
       if (this.exposed > 0) return false;
@@ -720,7 +734,7 @@
       });
     }
     batR() { return R(this.bx + 34, this.by + 12, 16, 10); }
-    weak() { return this.state === 'perched' ? [this.batR()] : []; }
+    weak() { return this.state === 'perched' ? [R(this.bx + 12, this.by + 6, this.bw - 24, this.bh - 6)] : []; }
     armor() { return [R(this.bx + 10, this.by + 6, this.bw - 20, this.bh - 6)]; }
     hurts() { return this.state === 'perched' ? [] : [R(this.bx + 12, this.by + 10, this.bw - 24, this.bh - 14)]; }
     think() {
@@ -795,7 +809,8 @@
       }));
     }
     coreR() { return R(this.bx + 23, this.by + 32, 18, 18); }
-    weak() { return this.state === 'vent' ? [this.coreR()] : []; }
+    weak() { return this.state === 'vent' ? [R(this.bx - 2, this.by + 28, this.bw + 4, this.bh - 34)] : []; }
+    soft() { return this.state === 'vent'; }
     armor() { return [R(this.bx, this.by, this.bw, this.bh)]; }
     hurts() { const r = [R(this.bx + 6, this.by + 4, this.bw - 12, this.bh - 4)]; if (this.fist) r.push(R(this.fist.x, this.fist.y, 22, 18)); return r; }
     think() {
