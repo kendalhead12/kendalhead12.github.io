@@ -102,7 +102,7 @@ export function serialize() {
   const q = (b) => { const r = b.rotation(); return [+r.x.toFixed(4), +r.y.toFixed(4), +r.z.toFixed(4), +r.w.toFixed(4)]; };
   const bodies = [];
   const data = { map: G.mapId, time: Date.now(), props: [], vehicles: [], creatures: [], spawners: [], welds: [] };
-  for (const p of G.props) { if (p.def.debris) continue; data.props.push({ id: p.defId, p: v(p.body), q: q(p.body), f: p.frozen ? 1 : 0, s: p.mesh.scale.x !== 1 ? [p.mesh.scale.x, p.mesh.scale.y, p.mesh.scale.z] : undefined }); bodies.push(p.body); }
+  for (const p of G.props) { if (p.def.debris || p.def.gib) continue; data.props.push({ id: p.defId, p: v(p.body), q: q(p.body), f: p.frozen ? 1 : 0, s: p.mesh.scale.x !== 1 ? [p.mesh.scale.x, p.mesh.scale.y, p.mesh.scale.z] : undefined }); bodies.push(p.body); }
   for (const c of G.vehicles) { data.vehicles.push({ id: c.defId, p: v(c.body), q: q(c.body), f: c.body.isDynamic() ? 0 : 1 }); bodies.push(c.body); }
   for (const c of G.creatures) {
     if (!c.alive) continue;

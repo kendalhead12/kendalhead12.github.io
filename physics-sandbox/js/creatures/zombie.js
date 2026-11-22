@@ -101,7 +101,8 @@ export class Hunter extends Creature {
     const dir = new THREE.Vector3(tp.x - p.x, 0.3, tp.z - p.z).normalize();
     const point = t.isPlayer ? t.eyePos().add(new THREE.Vector3(0, -0.3, 0)) : t.position.add(new THREE.Vector3(0, (t.height || 1.7) * 0.7, 0));
     const [a, b] = this.def.damage || [10, 18];
-    t.takeDamage(rand(a, b), { type: this.def.hitType || 'bite', dir, point, attacker: this, part: 'chest', impulse: this.def.hitImpulse ?? 150 });
+    const part = this.def.hitParts ? pick(this.def.hitParts) : 'chest';
+    t.takeDamage(rand(a, b), { type: this.def.hitType || 'bite', dir, point, attacker: this, part, impulse: this.def.hitImpulse ?? 150 });
     play(this.def.hitSound || 'punch', point, 0.9);
   }
   possessedAttack() {

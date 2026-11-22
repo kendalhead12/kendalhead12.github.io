@@ -38,7 +38,7 @@ export const CREATURES = [
   {
     id: 'brute', name: 'Brute Zombie', desc: 'Huge, strong and very hard to knock down. Hits like a truck.', category: 'Zombies',
     kind: 'zombie', faction: 'zombie', cls: Zombie, buildRig: zombieRig({ scale: 1.3, torsoW: 0.48, torsoD: 0.3, belly: 0.3, uArmR: 0.075, lArmR: 0.068, thighR: 0.1, shinR: 0.085, mass: 220 }),
-    animStyle: 'zombie', health: 600, mass: 220, radius: 0.36, walkSpeed: 0.9, runSpeed: 2.6, damage: [22, 34], hitImpulse: 1400, attackDur: 1.0, attackCooldown: 1.6,
+    animStyle: 'zombie', health: 600, mass: 220, radius: 0.36, walkSpeed: 0.9, runSpeed: 2.6, damage: [22, 34], hitImpulse: 1400, hitParts: ['uArmL', 'uArmR', 'chest', 'head', 'chest'], attackDur: 1.0, attackCooldown: 1.6,
     reach: 1.4, stumbleChance: 0.06, knockThreshold: 2600, getupTime: 3, idleSound: 'groan', groanRate: 0.05, attackSound: 'zombieAttack', painSound: 'groan', deathSound: 'groan', turnSpeed: 3,
   },
   {
@@ -52,14 +52,14 @@ export const CREATURES = [
     id: 'maneater', name: 'Maneater', desc: 'A 10-foot hunched horror with long arms, claws and glowing eyes. Hunts humans, grabs them and lifts them off the ground.',
     category: 'Monsters', kind: 'maneater', faction: 'monster', cls: Maneater, buildRig: maneaterRig(1.72), animStyle: 'monster',
     health: 1500, mass: 420, radius: 0.5, walkSpeed: 1.6, runSpeed: 6.6, strideLen: 2.2, reach: 1.7, damage: [30, 45], hitImpulse: 2200, hitType: 'claw',
-    attackDur: 0.85, attackCooldown: 1.1, canGrab: true, noKnockdown: true, knockThreshold: 99999, idleSound: 'growl', groanRate: 0.07,
+    attackDur: 0.85, attackCooldown: 1.1, canGrab: true, hitParts: ['uArmL', 'uArmR', 'chest', 'head', 'thighL', 'thighR', 'chest'], noKnockdown: true, knockThreshold: 99999, idleSound: 'growl', groanRate: 0.07,
     deathSound: 'roar', painSound: null, sightMul: 1.25, turnSpeed: 5, accel: 10, scaleSfx: 1,
   },
   {
     id: 'juvenile', name: 'Juvenile Maneater', desc: 'A smaller, faster Maneater. Too small to lift prey, so it slashes instead.',
     category: 'Monsters', kind: 'maneater', faction: 'monster', cls: Maneater, buildRig: maneaterRig(1.15, 0x6a5f55), animStyle: 'monster',
     health: 420, mass: 140, radius: 0.36, walkSpeed: 1.8, runSpeed: 7.2, strideLen: 1.6, reach: 1.3, damage: [15, 24], hitImpulse: 700, hitType: 'claw',
-    attackDur: 0.6, attackCooldown: 0.8, canGrab: false, knockThreshold: 1400, getupTime: 1.5, idleSound: 'growl', groanRate: 0.05, deathSound: 'growl', sightMul: 1.1, scaleSfx: 0.45,
+    attackDur: 0.6, attackCooldown: 0.8, canGrab: false, hitParts: ['uArmL', 'uArmR', 'chest', 'lArmL', 'lArmR', 'thighL'], knockThreshold: 1400, getupTime: 1.5, idleSound: 'growl', groanRate: 0.05, deathSound: 'growl', sightMul: 1.1, scaleSfx: 0.45,
   },
   {
     id: 'skeleton', name: 'Skeleton', desc: 'A rattling animated skeleton. Its bones come apart when it is hit hard.',

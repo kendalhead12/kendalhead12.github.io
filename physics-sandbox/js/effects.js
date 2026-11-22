@@ -11,7 +11,7 @@ const tracers = [];
 const lights = [];
 const bubbles = [];
 const rings = [];
-let splatTex, holeTex, scorchTex, stainTex;
+let splatTex, holeTex, scorchTex, stainTex, poolTex;
 
 export function initEffects() {
   const geo = new THREE.IcosahedronGeometry(0.62, 0);
@@ -31,6 +31,7 @@ export function initEffects() {
   splatTex = makeSplat('#8a0b0b', true);
   stainTex = makeSplat('#7a0a0a', false);
   holeTex = makeHole();
+  poolTex = makePool();
   scorchTex = makeScorch();
 
   for (let i = 0; i < 3; i++) {
@@ -50,6 +51,20 @@ function makeSplat(color, drips) {
     x.beginPath(); x.arc(64 + Math.cos(a) * r, 64 + Math.sin(a) * r, s, 0, Math.PI * 2); x.fill();
     if (drips) { x.lineWidth = s * 0.8; x.strokeStyle = color; x.beginPath(); x.moveTo(64, 64); x.lineTo(64 + Math.cos(a) * r, 64 + Math.sin(a) * r); x.stroke(); }
   }
+  const t = new THREE.CanvasTexture(c); t.colorSpace = THREE.SRGBColorSpace; return t;
+}
+function makePool() {
+  const c = document.createElement('canvas'); c.width = c.height = 256;
+  const x = c.getContext('2d');
+  x.fillStyle = '#5a0505';
+  // irregular blob from overlapping circles
+  for (let i = 0; i < 14; i++) {
+    const a = Math.random() * 6.28, r = Math.random() * 55;
+    x.beginPath(); x.arc(128 + Math.cos(a) * r, 128 + Math.sin(a) * r, 40 + Math.random() * 40, 0, 6.3); x.fill();
+  }
+  const g = x.createRadialGradient(128, 128, 10, 128, 128, 120);
+  g.addColorStop(0, 'rgba(40,0,0,0.55)'); g.addColorStop(1, 'rgba(120,10,10,0)');
+  x.globalCompositeOperation = 'source-atop'; x.fillStyle = g; x.fillRect(0, 0, 256, 256);
   const t = new THREE.CanvasTexture(c); t.colorSpace = THREE.SRGBColorSpace; return t;
 }
 function makeHole() {
@@ -72,6 +87,7 @@ function makeScorch() {
 // spawn particles. type: blood | spark | dust | debris | ice | energy | water | bone | gib(cartoon) | wood | glass
 const TYPES = {
   blood: { color: [0x9a0d0d, 0x6e0707, 0xb81515], size: [0.03, 0.07], speed: 3.5, grav: 1, life: [0.5, 1.1], emissive: 0, splat: true },
+  drip: { color: [0x7a0808, 0x8e0d0d], size: [0.014, 0.028], speed: 1, grav: 1, life: [0.8, 1.6], emissive: 0, splat: true, splatChance: 0.55, splatSize: [0.04, 0.12] },
   spark: { color: [0xffd27a, 0xffb347, 0xfff2b0], size: [0.015, 0.035], speed: 7, grav: 0.6, life: [0.15, 0.4], emissive: 1 },
   dust: { color: [0xb0a898, 0x9a9288, 0xc8c0b0], size: [0.05, 0.12], speed: 1.5, grav: -0.05, life: [0.4, 0.9], emissive: 0, grow: 2.5 },
   debris: { color: [0x777777, 0x555555, 0x8a8a8a], size: [0.04, 0.1], speed: 4, grav: 1, life: [0.8, 1.6], emissive: 0 },
@@ -90,7 +106,7 @@ const TYPES = {
 
 const _c = new THREE.Color();
 export function burst(type, pos, count, dir, spread = 1, speedMul = 1) {
-  if (type === 'blood' && !settings.blood) type = 'impact';
+  if ((type === 'blood' || type === 'drip') && !settings.blood) { if (type === 'drip') return; type = 'impact'; }
   const T = TYPES[type]; if (!T) return;
   const n = Math.max(1, Math.round(count * (type === 'spark' || type === 'dust' ? 1 : fxScale())));
   for (let k = 0; k < n; k++) {
@@ -128,10 +144,12 @@ export function updateEffects(dt) {
     const ground = G.map ? G.map.groundAt(p.pos.x, p.pos.z) : 0;
     if (p.pos.y < ground + 0.02 && p.T.grav > 0) {
       p.pos.y = ground + 0.02; p.vel.set(p.vel.x * 0.3, 0, p.vel.z * 0.3);
-      if (p.T.splat && !p.splatted && settings.blood && Math.random() < 0.25) {
+      if (p.T.splat && !p.splatted && settings.blood && Math.random() < (p.T.splatChance ?? 0.25)) {
         p.splatted = true;
-        addDecal(new THREE.Vector3(p.pos.x, ground + 0.015, p.pos.z), new THREE.Vector3(0, 1, 0), 'blood', 0.15 + Math.random() * 0.25);
+        const sz = p.T.splatSize || [0.15, 0.4];
+        addDecal(new THREE.Vector3(p.pos.x, ground + 0.015, p.pos.z), new THREE.Vector3(0, 1, 0), 'blood', sz[0] + Math.random() * (sz[1] - sz[0]));
       }
+      if (p.T.splat) p.life = Math.min(p.life, 0.05);
     }
     const f = p.life / p.max;
     const s = p.size * (p.T.grow ? 1 + (1 - f) * p.T.grow : Math.min(1, f * 3));
@@ -149,7 +167,7 @@ export function updateEffects(dt) {
     if (d.userData.ttl !== undefined) {
       d.userData.ttl -= dt;
       if (d.userData.ttl < 3) d.material.opacity = Math.max(0, d.userData.ttl / 3) * d.userData.op;
-      if (d.userData.ttl <= 0) { d.parent && d.parent.remove(d); d.material.dispose(); decals.splice(i, 1); }
+      if (d.userData.ttl <= 0) { d.parent && d.parent.remove(d); if (!d.userData.shared) d.material.dispose(); decals.splice(i, 1); }
     }
   }
   for (let i = tracers.length - 1; i >= 0; i--) {
@@ -171,33 +189,58 @@ export function updateEffects(dt) {
     r.material.opacity = (1 - k) * 0.7;
     if (k >= 1) { G.scene.remove(r); r.geometry.dispose(); r.material.dispose(); rings.splice(i, 1); }
   }
+  for (let i = pools.length - 1; i >= 0; i--) {
+    const d = pools[i], g = d.userData.grow;
+    g.t += dt;
+    const k = Math.min(1, g.t / g.secs);
+    d.scale.setScalar(0.05 + (1 - Math.pow(1 - k, 2)) * g.size);
+    if (k >= 1 || !d.parent) pools.splice(i, 1);
+  }
   G.shake = Math.max(0, G.shake - dt * 2.5);
 }
 
 // type: blood | stain | hole | scorch
+const sharedMats = {};
+function decalMat(type) {
+  if (sharedMats[type]) return sharedMats[type];
+  const map = { blood: splatTex, stain: stainTex, pool: poolTex }[type];
+  return (sharedMats[type] = new THREE.MeshStandardMaterial({ map, transparent: true, depthWrite: false, polygonOffset: true, polygonOffsetFactor: -4, roughness: 0.25, metalness: 0, opacity: type === 'pool' ? 0.95 : 0.92 }));
+}
 export function addDecal(pos, normal, type, size = 0.2, parent = null) {
-  if ((type === 'blood' || type === 'stain') && !settings.blood) return;
-  const map = { blood: splatTex, stain: stainTex, hole: holeTex, scorch: scorchTex }[type];
-  const m = new THREE.MeshBasicMaterial({ map, transparent: true, depthWrite: false, polygonOffset: true, polygonOffsetFactor: -4, opacity: type === 'blood' ? 0.9 : 1, color: type === 'blood' ? 0xdddddd : 0xffffff });
+  if ((type === 'blood' || type === 'stain' || type === 'pool') && !settings.blood) return;
+  const shared = type === 'blood' || type === 'stain' || type === 'pool';
+  const map = { hole: holeTex, scorch: scorchTex }[type];
+  const m = shared ? decalMat(type) : new THREE.MeshBasicMaterial({ map, transparent: true, depthWrite: false, polygonOffset: true, polygonOffsetFactor: -4 });
   const d = new THREE.Mesh(planeGeo, m);
   d.scale.setScalar(size);
   d.position.copy(pos).addScaledVector(normal, 0.01);
   d.lookAt(pos.clone().add(normal));
   d.rotateZ(Math.random() * 6.28);
   d.userData.op = m.opacity;
+  d.userData.shared = shared;
+  if (type === 'pool') d.renderOrder = -1;
   if (type === 'hole' || type === 'scorch') d.userData.ttl = type === 'hole' ? 25 : 40;
   if (parent) { parent.worldToLocal(d.position); const q = parent.getWorldQuaternion(new THREE.Quaternion()).invert(); d.quaternion.premultiply(q); d.scale.divideScalar(parent.getWorldScale(new THREE.Vector3()).x); parent.add(d); }
   else G.scene.add(d);
   decals.push(d);
   const cap = Math.round(250 * Math.max(0.3, fxScale()));
-  while (decals.length > cap) { const o = decals.shift(); o.parent && o.parent.remove(o); o.material.dispose(); }
+  while (decals.length > cap) { const o = decals.shift(); o.parent && o.parent.remove(o); if (!o.userData.shared) o.material.dispose(); }
   return d;
 }
 const planeGeo = new THREE.PlaneGeometry(1, 1);
 
+// slowly spreading pool of blood under a body
+const pools = [];
+export function bloodPool(pos, size = 1.2, secs = 9) {
+  const d = addDecal(pos, new THREE.Vector3(0, 1, 0), 'pool', 0.05);
+  if (!d) return;
+  d.userData.grow = { t: 0, secs, size: size * (0.85 + Math.random() * 0.3) };
+  pools.push(d);
+}
+
 export function clearDecals() {
-  for (const d of decals) { d.parent && d.parent.remove(d); d.material.dispose(); }
-  decals.length = 0;
+  for (const d of decals) { d.parent && d.parent.remove(d); if (!d.userData.shared) d.material.dispose(); }
+  decals.length = 0; pools.length = 0;
 }
 
 export function tracer(from, to, color = 0xffe9a8, width = 1, life = 0.08, op = 0.9) {

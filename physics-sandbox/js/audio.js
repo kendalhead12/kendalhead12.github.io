@@ -149,6 +149,9 @@ const SFX = {
   engine: (d, t) => { tone(d, t, 0.5, { freq: 60, freqEnd: 90, vol: 0.4, type: 'sawtooth', filter: { freq: 400 } }); },
   horn: (d, t) => { tone(d, t, 0.6, { freq: 400, vol: 0.4, type: 'square', filter: { freq: 1200 } }); tone(d, t, 0.6, { freq: 500, vol: 0.3, type: 'square', filter: { freq: 1200 } }); },
   splash: (d, t) => { noise(d, t, 0.6, { freq: 1200, freqEnd: 300, vol: 0.9, attack: 0.02 }); },
+  tear: (d, t) => { noise(d, t, 0.35, { type: 'bandpass', freq: 500, freqEnd: 2400, q: 3, vol: 1.1, attack: 0.02 }); noise(d, t + 0.05, 0.25, { freq: 700, freqEnd: 150, vol: 0.9 }); tone(d, t, 0.15, { freq: 180, freqEnd: 70, vol: 0.5, type: 'triangle' }); },
+  gore: (d, t) => { noise(d, t, 0.45, { freq: 900, freqEnd: 120, q: 4, vol: 1.2 }); noise(d, t + 0.03, 0.3, { type: 'bandpass', freq: 350, q: 6, vol: 0.8 }); tone(d, t, 0.25, { freq: 110, freqEnd: 45, vol: 0.6, type: 'sine' }); },
+  chew: (d, t) => { noise(d, t, 0.1, { type: 'bandpass', freq: 600 + Math.random() * 500, q: 3, vol: 0.7 }); noise(d, t + 0.04, 0.08, { freq: 400, vol: 0.5 }); },
   squish: (d, t) => { noise(d, t, 0.25, { freq: 600, freqEnd: 150, vol: 0.9 }); tone(d, t, 0.2, { freq: 200, freqEnd: 70, vol: 0.4, type: 'triangle' }); },
 };
 

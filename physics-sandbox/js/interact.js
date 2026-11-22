@@ -224,7 +224,8 @@ I.handlesAlt = function (id) {
       if (!settings.ragdolls || info.ent.mass > 250) return true;
       info.ent.knockDown({ dir: camRay().dir.negate(), impulse: info.ent.knockThreshold * 1.2 });
       const rd = info.ent.ragdoll; if (!rd) return true;
-      startHold({ kind: 'ragdoll', ent: info.ent, body: rd.parts.chest.body, part: 'chest' }, hit.point, 'gravgun');
+      const hp = rd.parts.chest ? 'chest' : 'pelvis';
+      startHold({ kind: 'ragdoll', ent: info.ent, body: rd.parts[hp].body, part: hp }, hit.point, 'gravgun');
       return true;
     }
     if (!info.body.isDynamic() || info.body.mass() > 300) { play('empty', null, 0.5); return true; }

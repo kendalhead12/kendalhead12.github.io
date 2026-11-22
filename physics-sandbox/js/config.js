@@ -9,6 +9,7 @@ export const defaults = {
   playerInvincible: false,
   infiniteAmmo: false,
   blood: true,
+  gore: true,                 // dismemberment, gibs, Maneaters eating prey (needs blood on)
   damageFx: 'medium',         // low | medium | high
   fxIntensity: 1,             // 0..2 visual-effects intensity slider
   ragdolls: true,

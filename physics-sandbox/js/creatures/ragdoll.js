@@ -9,13 +9,14 @@ const LIMITS = {
   knee: [0, 2.5], elbow: [-2.5, 0], hip: [-1.9, 0.6], spine: [-0.45, 1.25], neck: [-0.7, 0.8],
 };
 
-export function createRagdoll(rig, { velocity, owner, totalMass, damping = 1 } = {}) {
+export function createRagdoll(rig, { velocity, owner, totalMass, damping = 1, skip = null } = {}) {
   const R = G.RAPIER;
   rig.root.updateMatrixWorld(true);
   const parts = {};
   const fracSum = rig.segments.reduce((a, s) => a + s.massFrac, 0);
   const mass = totalMass || rig.mass || 70;
   for (const seg of rig.segments) {
+    if (skip && skip.has(seg.name)) continue;  // severed / eaten parts
     const bone = rig.bones[seg.name];
     bone.matrixWorld.decompose(_p, _q, _s);
     const c = seg.center.clone().applyQuaternion(_q).add(_p);
@@ -37,6 +38,7 @@ export function createRagdoll(rig, { velocity, owner, totalMass, damping = 1 } =
   for (const seg of rig.segments) {
     if (!seg.parent) continue;
     const child = parts[seg.name], par = parts[seg.parent];
+    if (!child || !par) continue;
     const bone = rig.bones[seg.name];
     bone.matrixWorld.decompose(_p, _q, _s);
     const pt = par.body.translation(), pr = par.body.rotation();
@@ -64,6 +66,7 @@ export function syncRagdoll(rd) {
   const rig = rd.rig;
   for (const seg of rig.segments) {
     const part = rd.parts[seg.name];
+    if (!part) continue;
     const t = part.body.translation(), r = part.body.rotation();
     const q = new THREE.Quaternion(r.x, r.y, r.z, r.w);
     const p = seg.center.clone().applyQuaternion(q).multiplyScalar(-1).add(new THREE.Vector3(t.x, t.y, t.z));
@@ -71,6 +74,7 @@ export function syncRagdoll(rd) {
     const bone = part.bone;
     if (!seg.parent) { bone.position.copy(p); bone.quaternion.copy(q); }
     else {
+      if (!rd.parts[seg.parent]) { bone.position.copy(p); bone.quaternion.copy(q); continue; }
       const pq = _wq[seg.parent], pp = _wp[seg.parent];
       const inv = pq.clone().invert();
       bone.position.copy(p).sub(pp).applyQuaternion(inv);

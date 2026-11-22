@@ -35,8 +35,8 @@ export function applyHit(hit, info) {
       if (p.body && p.body.isDynamic()) p.body.applyImpulseAtPoint(dir.clone().multiplyScalar(imp), hit.point, true);
       p.takeDamage(info.damage, { ...info, point: hit.point, normal: hit.normal });
       if (info.type === 'bullet') {
-        burst(p.def.material === 'wood' ? 'wood' : p.def.material === 'glass' ? 'glass' : 'spark', hit.point, 5, hit.normal, 0.6);
-        if (p.def.material !== 'glass' && p.def.material !== 'soft') addDecal(hit.point, hit.normal, 'hole', 0.08, p.mesh);
+        burst(p.def.material === 'wood' ? 'wood' : p.def.material === 'glass' ? 'glass' : p.def.material === 'flesh' ? 'blood' : 'spark', hit.point, 5, hit.normal, 0.6);
+        if (p.def.material !== 'glass' && p.def.material !== 'soft' && p.def.material !== 'flesh') addDecal(hit.point, hit.normal, 'hole', 0.08, p.mesh);
       } else if (info.type === 'melee') {
         play(p.def.material === 'metal' ? 'metal' : p.def.material === 'wood' ? 'wood' : 'thud', hit.point, 0.8);
       }
@@ -88,7 +88,7 @@ export function explosion(pos, { radius = 6, damage = 120, impulse = 40, attacke
       }
       hit.add(ent);
       ent.takeDamage(damage * k, { type, dir: d, point: new THREE.Vector3(bp.x, bp.y, bp.z), impulse: impulse * k * 20, attacker, part: owner.part || 'chest', blast: true });
-      if (owner.type === 'ragdoll' && body) body.applyImpulse(d.clone().multiplyScalar(impulse * k * 0.4 * body.mass() / 10), true);
+      if (owner.type === 'ragdoll' && body && !body._removed) body.applyImpulse(d.clone().multiplyScalar(impulse * k * 0.4 * body.mass() / 10), true);
     } else if (owner.type === 'prop' || owner.type === 'vehicle') {
       if (hit.has(ent)) continue; hit.add(ent);
       if (body && body.isDynamic()) body.applyImpulse(d.clone().multiplyScalar(impulse * k * Math.min(body.mass(), 400) * 0.15), true);
