@@ -7,6 +7,7 @@ import { createBody, removeBody, raycast, groups, GROUP } from '../physics.js';
 import { createRagdoll, syncRagdoll, destroyRagdoll, ragdollPelvis, setRagdollFrozen, ragdollSpeed, detachPart } from './ragdoll.js';
 import { burst, addDecal, speechBubble, removeBubblesFor } from '../effects.js';
 import { play, speak } from '../audio.js';
+import { goreDamage, updateBleeds, addBleed, goreOn } from '../gore.js';
 
 const UP = new THREE.Vector3(0, 1, 0);
 const tmp = new THREE.Vector3(), tmp2 = new THREE.Vector3();
@@ -57,6 +58,8 @@ export class Creature {
     this.faceTimer = 0;
     this.frozenTime = 0;
     this.removed = false;
+    this.severed = new Set();
+    this.bleeds = [];
     this.created = G.time;
     this.createCapsule(pos);
     G.creatures.push(this);
@@ -101,6 +104,10 @@ export class Creature {
   forward() { return new THREE.Vector3(Math.sin(this.yaw), 0, Math.cos(this.yaw)); }
 
   partFromHeight(point) {
+    const p = this._partFromHeight(point);
+    return this.severed.has(p) ? 'chest' : p;
+  }
+  _partFromHeight(point) {
     const r = (point.y - this.position.y) / this.height;
     const side = new THREE.Vector3(point.x, 0, point.z).sub(new THREE.Vector3(this.position.x, 0, this.position.z));
     const right = new THREE.Vector3(-Math.cos(this.yaw), 0, Math.sin(this.yaw)); // character's right = -X local
@@ -259,6 +266,7 @@ export class Creature {
       if (this.frozenTime <= 0) this.unfreeze();
       return;
     }
+    if (this.bleeds.length || (!this.alive && !this.pooled)) { updateBleeds(this, dt); if (this.removed) return; }
     if (this.ragdoll) {
       syncRagdoll(this.ragdoll);
       if (this.alive) {
@@ -267,7 +275,7 @@ export class Creature {
       }
       return;
     }
-    if (!this.alive) { this.animateDeadFall(dt); return; }
+    if (!this.alive) { if (this.grabbedBy && this.body) this.animLimp(); else this.animateDeadFall(dt); return; }
     if (this.faceTimer > 0) { this.faceTimer -= dt; if (this.faceTimer <= 0) this.rig.setFace(this.moodFace()); }
     this.stateTime += dt;
     if (this.held || this.grabbedBy) {
@@ -346,12 +354,14 @@ export class Creature {
     }
     // ragdolled body: push the hit part
     if (this.ragdoll) {
-      const part = this.ragdoll.parts[info.part] || this.ragdoll.parts.chest;
+      const part = this.ragdoll.parts[info.part] || this.ragdoll.parts.chest || this.ragdoll.parts.pelvis;
       if (info.impulse && part) part.body.applyImpulseAtPoint(dir.clone().multiplyScalar(info.impulse * 0.12), point, true);
       if (this.def.detachable && amount > 0) this.damagePart(info.part, amount, dir);
     }
-    if (amount > 0 && !(settings.npcInvincible && !info.forceKill) && !this.invincible) this.health -= amount;
-    if (!this.alive) return;
+    const applied = amount > 0 && !(settings.npcInvincible && !info.forceKill) && !this.invincible;
+    if (applied) this.health -= amount;
+    if (applied && goreDamage(this, amount, info) === 'gibbed') return;
+    if (this.removed || !this.alive) return;
     if (attacker && attacker !== this) this.lastAttacker = attacker;
     if (amount > 0) {
       this.setFaceFor('pain', 0.5);
@@ -373,6 +383,7 @@ export class Creature {
     const n = (info.normal && info.normal.lengthSq() > 0) ? info.normal : info.dir.clone().negate();
     addDecal(point, n, 'stain', 0.12 + Math.random() * 0.1, bone);
     if (settings.damageFx !== 'low') addDecal(point, n, 'hole', 0.05, bone);
+    if (goreOn() && bone.parent) { bone.updateMatrixWorld(true); addBleed(this, bone, bone.worldToLocal(point.clone()), { secs: 14 + Math.random() * 10 }); }
   }
   onDamaged(amount, info) {}
 
@@ -388,12 +399,12 @@ export class Creature {
   }
   becomeRagdoll(velocity) {
     this.removeCapsule();
-    this.ragdoll = createRagdoll(this.rig, { velocity, owner: this, totalMass: this.mass });
+    this.ragdoll = createRagdoll(this.rig, { velocity, owner: this, totalMass: this.mass, skip: this.severed });
   }
   getUp() {
     const pv = ragdollPelvis(this.ragdoll);
     const pos = new THREE.Vector3(pv.pos.x, pv.pos.y, pv.pos.z);
-    const chestQ = this.ragdoll.parts.chest.body.rotation();
+    const chestQ = (this.ragdoll.parts.chest || this.ragdoll.parts.pelvis).body.rotation();
     const chestUp = new THREE.Vector3(0, 1, 0).applyQuaternion(new THREE.Quaternion(chestQ.x, chestQ.y, chestQ.z, chestQ.w));
     const faceUp = new THREE.Vector3(0, 0, 1).applyQuaternion(new THREE.Quaternion(chestQ.x, chestQ.y, chestQ.z, chestQ.w)).y > 0;
     this.yaw = this.targetYaw = Math.atan2(chestUp.x, chestUp.z) + (faceUp ? Math.PI : 0);
@@ -413,14 +424,19 @@ export class Creature {
     this.action = null;
     this.rig.setFace(this.def.deadFace || 'dead');
     removeBubblesFor(this.bubbleFollow);
-    if (this.grabbedBy) this.grabbedBy.releaseGrab && this.grabbedBy.releaseGrab();
+    const eatenBy = this.grabbedBy && this.grabbedBy.eating === this ? this.grabbedBy : null;
+    if (this.grabbedBy && !eatenBy) this.grabbedBy.releaseGrab && this.grabbedBy.releaseGrab();
     if (this.grabbing) this.releaseGrab && this.releaseGrab();
     if (this.def.deathSound) play(this.def.deathSound, this.position, 1, 1, this.voicePitch || 1);
     emitNoise(this.position, 22, 'death', this);
     // notify witnesses
     const killer = info.attacker || this.lastAttacker;
     for (const c of G.creatures) if (c !== this && c.alive && c.onWitnessDeath && c.position.distanceTo(this.position) < 30) c.onWitnessDeath(this, killer);
-    if (settings.ragdolls && this.body) {
+    if (info.silentRagdoll || this._gibbed) {
+      // the body is about to be removed (gibbed)
+    } else if (eatenBy) {
+      // stays in the monster's hand
+    } else if (settings.ragdolls && this.body) {
       const v = this.velocity;
       if (info.dir && info.impulse) v.addScaledVector(info.dir, Math.min(18, info.impulse / this.mass));
       this.becomeRagdoll(v);
@@ -435,6 +451,14 @@ export class Creature {
     }
     if (this.onDeath) this.onDeath(info);
     if (G.ui) G.ui.onCreatureDied(this);
+  }
+  animLimp() {
+    const b = this.rig.bones, t = G.time + this.id;
+    this.rig.reset();
+    b.head.rotation.x = 0.9; b.chest.rotation.x = 0.25;
+    b.uArmL.rotation.set(0.25 + Math.sin(t * 2) * 0.08, 0, 0.15); b.uArmR.rotation.set(0.2 + Math.sin(t * 2 + 1) * 0.08, 0, -0.15);
+    b.lArmL.rotation.x = -0.25; b.lArmR.rotation.x = -0.3;
+    b.thighL.rotation.x = -0.15; b.thighR.rotation.x = 0.05; b.shinL.rotation.x = 0.35; b.shinR.rotation.x = 0.2;
   }
   animateDeadFall(dt) {
     if (!this.deathFall) return;

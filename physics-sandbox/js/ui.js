@@ -138,7 +138,8 @@ export class UI {
         ['voices', 'Voice Lines (speech)', 'toggle', 'Speech synthesis for NPC dialogue'],
       ]],
       ['Effects', [
-        ['blood', 'Blood Effects', 'toggle', 'Off: hits show white impact sparks instead'],
+        ['blood', 'Blood Effects', 'toggle', 'Off: hits show white impact sparks instead, and all gore is disabled'],
+        ['gore', 'Dismemberment & Gibs', 'toggle', 'Severed limbs, gibbing, bleeding, Maneaters eating their prey'],
         ['damageFx', 'Damage Effects', ['low', 'medium', 'high']],
         ['fxIntensity', 'Visual Effects Intensity', [0, 2, 0.05]],
       ]],

@@ -296,7 +296,7 @@ function shockwaveBlast(cone) {
     const ent = owner.entity;
     if (owner.type === 'creature' || owner.type === 'ragdoll') {
       if (!seen.has(ent)) { seen.add(ent); ent.takeDamage(12 * k, { type: 'blast', dir: push, impulse: 2500 * k, attacker: G.player, part: owner.part || 'chest', blast: true, point: new THREE.Vector3(bp.x, bp.y, bp.z) }); }
-      if (owner.type === 'ragdoll' && body.isDynamic()) body.applyImpulse(push.clone().multiplyScalar(body.mass() * 14 * k), true);
+      if (owner.type === 'ragdoll' && !body._removed && body.isDynamic()) body.applyImpulse(push.clone().multiplyScalar(body.mass() * 14 * k), true);
     } else if (body.isDynamic()) {
       body.applyImpulse(push.multiplyScalar(Math.min(body.mass(), 600) * 16 * k), true);
       if (ent && ent.takeDamage) ent.takeDamage(10 * k, { type: 'blast', attacker: G.player });

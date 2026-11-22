@@ -6,7 +6,8 @@ import { rand } from './creature.js';
 import { Hunter } from './zombie.js';
 import { buildHumanoid } from './rig.js';
 import { play } from '../audio.js';
-import { burst, shake } from '../effects.js';
+import { burst, shake, addDecal } from '../effects.js';
+import { goreOn, severPart, afterSever, spawnChunks, subtree } from '../gore.js';
 
 export function maneaterRig(scale = 1.72, skin = 0x56524c) {
   return () => buildHumanoid({
@@ -81,7 +82,7 @@ export class Maneater extends Hunter {
     this.stop();
     shake(0.3, this.position);
     play('crunch', this.position, 0.4);
-    this.startAction('lift', 1.3, { onDone: () => this.feed() });
+    this.startAction('lift', 1.3, { onDone: () => this.startEating() });
   }
   feed() {
     if (!this.grabbing) return;
@@ -109,27 +110,198 @@ export class Maneater extends Hunter {
     play('growl', this.position, 1);
     this._lastAtk = G.time + 1.5;
   }
-  releaseGrab(silent = false) {
+  releaseGrab(silent = false, toss = null) {
     const t = this.grabbing;
-    this.grabbing = null;
-    if (this.action && ['lift', 'feed', 'reach'].includes(this.action.name)) this.action = null;
-    if (t) {
+    this.grabbing = null; this.eating = null; this.meal = null;
+    if (this.action && ['lift', 'feed', 'reach', 'eat'].includes(this.action.name)) this.action = null;
+    if (t && !t.removed) {
       t.grabbedBy = null;
       if (t.body) { t.setHeld(false); if (t.collider) t.collider.setSensor(false); }
-      if (t.alive && t.scare && !silent) { t.rig.setFace('scared'); t.scare(this, this.position, { shock: false }); }
+      if (!t.alive && t.body && !t.ragdoll) {
+        // drop (or throw away) what's left of the body
+        const v = toss || new THREE.Vector3(0, -1, 0);
+        if (settings.ragdolls) t.becomeRagdoll(v); else { t.deathFall = { t: 0 }; t.removeCapsule(); }
+      } else if (t.alive && t.crippled && t.body) {
+        // no legs left: drop to the ground and bleed out
+        if (settings.ragdolls) { t.knockDown({ dir: new THREE.Vector3(0, -1, 0), impulse: t.knockThreshold * 1.2 }); t.getupTimer = 1e9; }
+      } else if (t.alive && t.scare && !silent) { t.rig.setFace('scared'); t.scare(this, this.position, { shock: false }); }
     }
+  }
+
+  // ---------- eating ----------
+  mouthPos() {
+    const hr = this.rig.headR;
+    return this.rig.bones.head.localToWorld(new THREE.Vector3(0, hr * 0.62, hr * 1.05));
+  }
+  startEating() {
+    const t = this.grabbing;
+    if (!t) return;
+    if (!goreOn()) { this.feed(); return; }   // non-graphic attack when gore is disabled
+    this.eating = t;
+    const arms = Math.random() < 0.5 ? ['uArmL', 'uArmR'] : ['uArmR', 'uArmL'];
+    const r = Math.random();
+    let plan, end;
+    if (r < 0.38) { plan = [arms[0], 'head', arms[1], 'chest', 'thighL', 'thighR']; end = 'devour'; }       // eats everything
+    else if (r < 0.72) { plan = (Math.random() < 0.6 ? [arms[0]] : []).concat(['head', 'chest']); end = 'discard'; } // eats the top half
+    else { plan = ['thighL', 'thighR', 'head']; end = 'discard'; }                                                     // eats the legs first
+    this.meal = { steps: plan.map(part => ({ part, rip: /Arm|thigh/.test(part) && Math.random() < 0.25 })), i: 0, t: 0, end, stains: 0, chewT: 0, k: 0 };
+    this.startAction('eat', 999);
+    play('growl', this.position, 1);
+  }
+  updateMeal(dt) {
+    const m = this.meal, t = this.grabbing;
+    let step = m.steps[m.i];
+    while (step && t.severed.has(step.part)) { m.i++; m.t = 0; step = m.steps[m.i]; }
+    if (!step) { this.finishMeal(); return; }
+    m.t += dt;
+    const BRING = 0.5, CHEW = step.rip ? 0.6 : 1.0;
+    m.phase = m.t < BRING ? 'bring' : 'chew';
+    m.rip = step.rip;
+    m.k = m.t < BRING ? Math.sin(m.t / BRING * Math.PI / 2) : (step.rip ? Math.max(0.3, 1 - (m.t - BRING) / CHEW) : 1 - Math.max(0, (m.t - BRING - CHEW * 0.7) / (CHEW * 0.3)) * 0.4);
+    if (m.t >= BRING && !step.done) { step.done = true; this.bite(step); }
+    if (m.phase === 'chew' && !step.rip) {
+      m.chewT += dt;
+      if (m.chewT > 0.22) {
+        m.chewT = 0;
+        const mp = this.mouthPos();
+        play('chew', mp, 0.8);
+        burst('drip', mp, 2, new THREE.Vector3(0, -1, 0), 0.5, 0.4);
+      }
+    }
+    if (m.t >= BRING + CHEW) { m.i++; m.t = 0; }
+  }
+  bite(step) {
+    const t = this.grabbing;
+    const mp = this.mouthPos();
+    if (step.rip) {
+      // tear it off with the other hand and fling it away
+      const side = new THREE.Vector3(-Math.cos(this.yaw), 0.8, Math.sin(this.yaw)).multiplyScalar(Math.random() < 0.5 ? 1 : -1);
+      severPart(t, step.part, { dir: side.add(this.forward()).normalize(), force: 9 });
+      play('roar', this.position, 0.5);
+    } else {
+      severPart(t, step.part, { eaten: true, silent: true });
+      play('crunch', mp, 1.2); play('gore', mp, 1);
+      burst('blood', mp, 30, this.forward().negate().add(new THREE.Vector3(0, -0.5, 0)), 0.9, 1.1);
+      if (step.part === 'chest' || step.part === 'thighL' || step.part === 'thighR') spawnChunks(mp, 3, new THREE.Vector3(0, -1, 0), 1.5);
+      if (this.meal.stains++ < 8) addDecal(mp, this.forward(), 'stain', 0.08 + Math.random() * 0.08, this.rig.bones.head);
+    }
+    shake(0.5, mp);
+    if (t.alive) { t.setFaceFor('pain', 1.5); if (t.scream) t.scream(); }
+    afterSever(t, step.part);
+  }
+  finishMeal() {
+    const t = this.grabbing;
+    const m = this.meal;
+    if (m.end === 'devour') {
+      const mp = this.mouthPos();
+      burst('blood', mp, 25, new THREE.Vector3(0, -1, 0), 0.8);
+      spawnChunks(t.position.add(new THREE.Vector3(0, 0.6, 0)), 6, new THREE.Vector3(0, -1, 0), 2);
+      const g = G.map.groundBelow(this.position.add(this.forward()));
+      import('../effects.js').then(e => e.bloodPool(new THREE.Vector3(mp.x, g + 0.012, mp.z), 1.6));
+      this.grabbing = null; this.eating = null; this.meal = null; this.action = null;
+      t.grabbedBy = null;
+      t.remove();
+    } else {
+      const toss = this.forward().multiplyScalar(-0.5).add(new THREE.Vector3(-Math.cos(this.yaw) * 5, 3, Math.sin(this.yaw) * 5).multiplyScalar(Math.random() < 0.5 ? 1 : -1));
+      this.releaseGrab(true, toss);
+      play('thud', this.position, 0.8);
+    }
+    play('growl', this.position, 1);
+    this.feedCooldown = G.time + 20;
+    this._lastAtk = G.time + 1.5;
+  }
+
+  // ---------- scavenging corpses ----------
+  findCorpse() {
+    let best = null, bd = 26;
+    const p = this.position;
+    for (const c of G.creatures) {
+      if (c.alive || c.removed || !c.ragdoll || c.kind === 'maneater' || c.kind === 'skeleton' || c.kind === 'dummy' || c.eatenBy) continue;
+      const left = Object.keys(c.ragdoll.parts).filter(n => n !== 'pelvis').length;
+      if (left < 1) continue;
+      const d = c.position.distanceTo(p);
+      if (d < bd) { bd = d; best = c; }
+    }
+    return best;
+  }
+  scavenge(dt) {
+    const c = this.corpse;
+    if (!c || c.removed || !c.ragdoll) { this.endScavenge(); return; }
+    const cp = c.position;
+    const d = Math.hypot(cp.x - this.position.x, cp.z - this.position.z);
+    if (d > 1.9) { this.setPathTo(cp); this.followPath(Math.max(this.walkSpeed * 1.5, this.runSpeed * 0.5)); return; }
+    this.stop(); this.faceTo(cp);
+    if (!this.action) this.startAction('crouchFeed', 1.4, { hitAt: 0.6, onHit: () => this.biteCorpse() });
+  }
+  biteCorpse() {
+    const c = this.corpse;
+    if (!c || c.removed || !c.ragdoll) return;
+    const names = Object.keys(c.ragdoll.parts).filter(n => n !== 'pelvis');
+    const mp = this.mouthPos();
+    if (!names.length) {
+      // nothing left but the hips: finish it off
+      const t = c.ragdoll.parts.pelvis.body.translation();
+      spawnChunks(new THREE.Vector3(t.x, t.y, t.z), 4, new THREE.Vector3(0, 1, 0), 1.5);
+      c.remove();
+      this.endScavenge();
+      return;
+    }
+    // the part nearest the mouth, preferring outer limbs (subtree size 1)
+    names.sort((a, b) => {
+      const pa = c.ragdoll.parts[a].body.translation(), pb = c.ragdoll.parts[b].body.translation();
+      const sa = subtree(c.rig, a).length, sb = subtree(c.rig, b).length;
+      return (Math.hypot(pa.x - mp.x, pa.y - mp.y, pa.z - mp.z) + sa * 0.3) - (Math.hypot(pb.x - mp.x, pb.y - mp.y, pb.z - mp.z) + sb * 0.3);
+    });
+    const name = names[0];
+    const bt = c.ragdoll.parts[name].body.translation();
+    const at = new THREE.Vector3(bt.x, bt.y, bt.z);
+    severPart(c, name, { eaten: true, silent: true });
+    burst('blood', at, 24, new THREE.Vector3(0, 1, 0), 1, 1);
+    play('crunch', at, 1.1); play('gore', at, 0.9);
+    this.corpseBites = (this.corpseBites || 0) + 1;
+    if ((this.mealStains = (this.mealStains || 0) + 1) < 10) addDecal(mp, this.forward(), 'stain', 0.1, this.rig.bones.head);
+    // sometimes it leaves the rest
+    if (this.corpseBites >= this.corpseLimit) this.endScavenge();
+  }
+  endScavenge() {
+    if (this.corpse) this.corpse.eatenBy = null;
+    this.corpse = null; this.corpseBites = 0;
+    if (this.state === 'scavenge') this.state = 'wander';
+    if (this.action && this.action.name === 'crouchFeed') this.action = null;
+    this.feedCooldown = G.time + 15;
+    play('growl', this.position, 0.8);
+  }
+  act(dt) {
+    if (this.grabbing) { this.stop(); return; }
+    if (this.state === 'scavenge') { this.scavenge(dt); return; }
+    super.act(dt);
   }
   update(dt) {
     super.update(dt);
     if (this.grabbing && this.alive && !this.ragdoll) {
       const t = this.grabbing;
-      if (!t.alive || t.removed || !t.body) { this.releaseGrab(); return; }
+      if (t.removed || !t.body || (!t.alive && !this.eating)) { this.releaseGrab(); return; }
       const rig = this.rig;
       rig.root.updateMatrixWorld(true);
       const hand = rig.bones.lArmR.localToWorld(rig.handLocal.clone());
       // hold the prey by the torso, facing the Maneater
       const feet = hand.clone().add(new THREE.Vector3(0, -t.height * 0.72, 0)).addScaledVector(this.forward(), 0.12);
       t.yaw = t.targetYaw = this.yaw + Math.PI;
+      if (this.meal) {
+        this.updateMeal(dt);
+        if (!this.grabbing) return;
+        // bring the part being eaten up to the mouth
+        const step = this.meal.steps[this.meal.i];
+        if (step && !t.severed.has(step.part)) {
+          const seg = t.rig.segments.find(s => s.name === step.part);
+          t.rig.root.updateMatrixWorld(true);
+          const partPos = t.rig.bones[step.part].localToWorld(seg.center.clone());
+          const off = this.mouthPos().sub(partPos).addScaledVector(this.forward(), 0.15);
+          if (step.rip) off.multiplyScalar(0.4);
+          this.meal.off = (this.meal.off || new THREE.Vector3()).lerp(off, Math.min(1, dt * 8));
+        }
+        if (this.meal.off) feet.addScaledVector(this.meal.off, this.meal.k);
+      }
       t.setKinematicPos(feet);
       if (this.action && this.action.name === 'feed' && this.action.bites) {
         const a = this.action;
@@ -140,6 +312,12 @@ export class Maneater extends Hunter {
   think() {
     if (this.grabbing) return;
     super.think();
+    if (this.target && this.state === 'chase') { if (this.corpse) this.endScavenge(); return; }
+    if (this.state !== 'scavenge' && !this.corpse && goreOn() && G.time > (this.feedCooldown || 0)) {
+      const c = this.findCorpse();
+      if (c) { this.corpse = c; c.eatenBy = this; this.state = 'scavenge'; this.corpseBites = 0; this.corpseLimit = Math.random() < 0.4 ? 99 : 3 + ((Math.random() * 3) | 0); this.path = null; }
+    }
+    if (this.corpse && this.state !== 'scavenge') this.endScavenge();
   }
   onNewTarget(t) {
     if (Math.random() < 0.4) this.roar();
@@ -188,7 +366,7 @@ export class Maneater extends Hunter {
     shake(0.12 * (this.def.scaleSfx ?? 1), this.position);
   }
   extraAnim(b, t, dt) {
-    if (this.rig.jaw && (!this.action || !['feed', 'roar'].includes(this.action.name))) this.rig.jaw.rotation.x = 0.08 + Math.sin(t * 2.3) * 0.05;
+    if (this.rig.jaw && (!this.action || !['feed', 'roar', 'eat', 'crouchFeed'].includes(this.action.name))) this.rig.jaw.rotation.x = 0.08 + Math.sin(t * 2.3) * 0.05;
   }
   animCustom(b, a, k, t) {
     const jaw = this.rig.jaw;
@@ -215,6 +393,28 @@ export class Maneater extends Hunter {
         for (const bt of (a.bites || [])) { const d = a.t - bt; if (d > -0.25 && d < 0.2) lunge = Math.max(lunge, 1 - Math.abs(d + 0.025) / 0.225); }
         b.chest.rotation.x = 0.1 + lunge * 0.35; b.head.rotation.x = -0.35 + lunge * 0.55;
         if (jaw) jaw.rotation.x = 0.9 * (1 - lunge) + 0.05;
+        break;
+      }
+      case 'eat': {
+        const m = this.meal || { k: 0, phase: 'bring' };
+        b.uArmR.rotation.x = -1.75; b.lArmR.rotation.x = -1.1; b.uArmR.rotation.z = 0.15;
+        if (m.rip && m.phase === 'chew') { b.uArmL.rotation.x = -0.4; b.uArmL.rotation.z = 0.9; b.lArmL.rotation.x = -0.2; }
+        else { b.uArmL.rotation.x = -1.7; b.lArmL.rotation.x = -0.9; b.uArmL.rotation.z = -0.2; }
+        const bite = m.phase === 'bring' ? m.k : 0;
+        b.chest.rotation.x = 0.15 + bite * 0.25 + (m.phase === 'chew' ? Math.sin(t * 9) * 0.04 : 0);
+        b.head.rotation.x = -0.3 + bite * 0.35 + (m.phase === 'chew' ? Math.sin(t * 14) * 0.08 : 0);
+        b.head.rotation.z = m.phase === 'chew' ? Math.sin(t * 7) * 0.12 : 0;
+        if (jaw) jaw.rotation.x = m.phase === 'bring' ? 0.2 + 0.85 * m.k : 0.15 + Math.abs(Math.sin(t * 14)) * 0.45;
+        break;
+      }
+      case 'crouchFeed': {
+        b.pelvis.position.y = b.pelvis.userData.rest.y * 0.42;
+        b.thighL.rotation.x = -1.45; b.thighR.rotation.x = -1.2; b.shinL.rotation.x = 2.2; b.shinR.rotation.x = 1.9;
+        const lunge = Math.max(0, Math.sin(Math.min(1, k / 0.6) * Math.PI));
+        b.chest.rotation.x = 1.15 + lunge * 0.25; b.head.rotation.x = -0.35 + lunge * 0.3 + (k > 0.6 ? Math.sin(t * 14) * 0.08 : 0);
+        b.uArmL.rotation.x = -1.1; b.uArmR.rotation.x = -1.0 - lunge * 0.3; b.lArmL.rotation.x = -0.4; b.lArmR.rotation.x = -0.4;
+        b.uArmL.rotation.z = 0.35; b.uArmR.rotation.z = -0.35;
+        if (jaw) jaw.rotation.x = k < 0.6 ? 0.2 + lunge * 0.8 : 0.15 + Math.abs(Math.sin(t * 14)) * 0.4;
         break;
       }
       case 'roar': {

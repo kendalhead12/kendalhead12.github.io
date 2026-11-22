@@ -217,6 +217,13 @@ export class Human extends Creature {
     }
   }
   onKnockedDown() { this.scream(); }
+  onLimbLost(part) {
+    this.scream();
+    this.setFaceFor('pain', 2);
+    if (this.grabbedBy) return;
+    this.say(pick(['AAARGH!', 'MY ARM!', 'Oh god, oh god!', 'HELP ME!']).replace('ARM', /thigh|shin/.test(part) ? 'LEG' : 'ARM'), { color: '#ffb0b0', priority: 2 });
+    if (!this.crippled && settings.npcFear) { this.threat = this.threat || { ent: this.lastAttacker, pos: (this.lastAttacker || this).position.clone(), seen: G.time }; this.setState('panic', 8); }
+  }
 
   // Heard warnings / noises
   checkNoises() {
