@@ -29,3 +29,17 @@ A 3D first-person physics sandbox (Three.js + Rapier, plain JavaScript modules, 
 - Controls: WASD move, mouse look, LMB attack, RMB aim/secondary, Space jump, Shift sprint, E pick up, G drop, Q spawn menu, R reload, F interact, V noclip, C free camera, Z undo, T slow motion, P pause simulation, ESC pause menu
 - Gore: limbs and heads can be cut, shot or blown off, explosions and crushing impacts gib bodies, wounds and stumps bleed (NPCs can bleed out), and blood pools spread under corpses. Maneaters eat their prey part by part (sometimes everything, sometimes throwing half away) and scavenge corpses. Turn off Blood Effects or Dismemberment & Gibs in Settings → Effects to disable it; the Maneater then uses a non-graphic attack.
 - Code: `physics-sandbox/js/` (`main.js` loop, `player.js`, `weapons.js`, `interact.js` tools, `combat.js`, `physics.js`, `maps.js`, `spawn.js`, `ui.js`, `creatures/*` AI + rigs + ragdolls). Libraries are vendored in `physics-sandbox/lib/` (MIT / Apache-2.0 licenses included).
+
+## Pixel World: Civilization Sandbox
+
+A 2D pixel-art god sandbox focused on civilization, geography, languages, diplomacy and long-form history (plain HTML5 Canvas + JavaScript, no build step; also runs straight from the file system).
+
+- Play: [`/pixel-world/`](./pixel-world/)
+- Worlds: random continents (seed, size, land coverage, island frequency, rivers, lakes, mountain ranges), blank ocean, or hand-drawn continents
+- Terrain editing: layered materials (soil, grass, sand, shallow/deep water, stone, mountains, snow, forest), 8 biome brushes, pencil, eraser (peels the top layer), paint-bucket flood fill, line, picker, coastline smoothing, brush size, undo/redo
+- Simulation: bands of named humans explore, camp, settle, farm and migrate; settlements grow from hamlets to metropolises through six eras (Primitive → Modern) with era-specific buildings, roads, walls, ports, factories, railways and highways
+- Nations: procedural names, flags, colours, governments, cultures and languages; wars with occupation, peace treaties, alliances, trade, independence, collapse and unification, with ink-bleed territory animation
+- History: per-country gallery (past borders, flags, names, population graphs, events), fallen-civilizations archive, world timelapse, statistics and comparisons
+- Map modes: terrain, political, administrative, language, population, diplomacy, technology, infrastructure
+- Saves: multiple IndexedDB slots, autosave, rename, JSON export/import
+- Controls: drag/right-drag/Space to pan, wheel or pinch to zoom, `P` pause, `1`–`8` map modes, `I B E F L K M H G` tools, `[`/`]` brush size, `Ctrl+Z`/`Ctrl+Y` undo/redo

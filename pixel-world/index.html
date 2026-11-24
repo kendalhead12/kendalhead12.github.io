@@ -1,0 +1,63 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no,viewport-fit=cover">
+<meta name="theme-color" content="#14111c">
+<title>Pixel World: Civilization Sandbox</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Pixelify+Sans:wght@400;600;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="style.css?v=1">
+</head>
+<body>
+<canvas id="view"></canvas>
+
+<header id="top">
+  <div class="brand"><span class="logo"></span><div><b>PIXEL WORLD</b><small id="worldName">New World</small></div></div>
+  <div class="clock"><span id="yearLbl">Year 0</span></div>
+  <div id="speeds" class="speeds"></div>
+  <div id="wstats" class="wstats"></div>
+  <button id="burger" class="burger" title="Menu">☰</button>
+  <nav id="menu" class="menu">
+    <button data-open="new">New</button>
+    <button data-open="saves">Save / Load</button>
+    <button data-open="nations">Nations</button>
+    <button data-open="diplomacy">Diplomacy</button>
+    <button data-open="stats">Statistics</button>
+    <button data-open="timelapse">Timelapse</button>
+    <button data-open="archive">Archive</button>
+    <button data-open="settings">Settings</button>
+    <button data-open="help">?</button>
+  </nav>
+</header>
+
+<div id="modes" class="modes"></div>
+<div id="legend" class="legend hidden"></div>
+<aside id="side" class="side hidden"></aside>
+<div id="toasts" class="toasts"></div>
+<div id="minimapWrap" class="minimap"><button id="mmToggle" title="Toggle minimap">▾</button><canvas id="minimap" width="220" height="146"></canvas></div>
+<div id="toolbar" class="toolbar"></div>
+<div id="tlbar" class="tlbar hidden"></div>
+<div id="pickHint" class="pickhint hidden"></div>
+<div id="tip" class="tip hidden"></div>
+<div id="person" class="person hidden"></div>
+<div id="busy" class="busy hidden">Working…</div>
+<div id="autoInd" class="autoind">Autosaved</div>
+<div id="modalRoot"></div>
+
+<script src="js/util.js?v=1"></script>
+<script src="js/terrain.js?v=1"></script>
+<script src="js/lang.js?v=1"></script>
+<script src="js/flags.js?v=1"></script>
+<script src="js/history.js?v=1"></script>
+<script src="js/sim.js?v=1"></script>
+<script src="js/sprites.js?v=1"></script>
+<script src="js/render.js?v=1"></script>
+<script src="js/charts.js?v=1"></script>
+<script src="js/tools.js?v=1"></script>
+<script src="js/save.js?v=1"></script>
+<script src="js/ui.js?v=1"></script>
+<script src="js/main.js?v=1"></script>
+</body>
+</html>
