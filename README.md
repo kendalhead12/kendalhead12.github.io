@@ -43,3 +43,17 @@ A 2D pixel-art god sandbox focused on civilization, geography, languages, diplom
 - Map modes: terrain, political, administrative, language, population, diplomacy, technology, infrastructure
 - Saves: multiple IndexedDB slots, autosave, rename, JSON export/import
 - Controls: drag/right-drag/Space to pan, wheel or pinch to zoom, `P` pause, `1`–`8` map modes, `I B E F L K M H G` tools, `[`/`]` brush size, `Ctrl+Z`/`Ctrl+Y` undo/redo
+
+## UNMADE
+
+An original story-driven RPG inspired by Undertale (plain HTML5 Canvas + JavaScript, no build step, runs straight from the file system). A small round creation with stick legs and no hands falls through the Creator's unfinished machine into the sealed monster dimension.
+
+- Play: [`/unmade/`](./unmade/)
+- Chapter 1 is complete and fully playable: the Creator's workshop prologue, the Dark Hallways (Sun's "tutorial", the Ex-Queen's rescue, puzzles, her home, her test at the great door) and Frostwood (FunnyGuyDev and Superkendal, the ice puzzle, Catty, the town of Snowbell, Princess Calia's "combat training", and Superkendal's final test on the bridge).
+- Battles: FIGHT (timed kick), ACT (enemy-specific actions), ITEM, MERCY (spare / flee); bullet-hell dodging with your SOUL; black-and-white battle sprites, coloured overworld.
+- Routes are tracked from the first step: Pacifist, Neutral, No Mercy and Genocide (area encounter populations, the HANDS weapon, empty areas, route-specific scenes). Sun and FunnyGuyDev remember resets; a second Genocide run makes monsters afraid.
+- Saves use `localStorage` (only keys starting with `unmade.`). RESET restarts the story but keeps "meta" memories; Settings → Erase All Data wipes everything after two confirmations.
+- Controls: Arrows/WASD move, Z/Enter confirm, X/Shift cancel (hold to run / move the SOUL slowly), C/Ctrl menu, Esc pause. On-screen D-pad and buttons appear on touch devices (or force them in Settings).
+- Settings: music and sound volume, text speed, reduce flashing, reduce screen shake, touch controls, fullscreen.
+- Code: `unmade/js/` — `core.js` (coroutines), `font.js`, `input.js`, `audio.js` + `music.js` (synth + original soundtrack), `gfx.js`, `art_*.js`, `tiles.js`, `state.js` (save/routes), `dialogue.js`, `world.js`, `battle.js` + `bullets.js`, `enemies_ch1.js`, `bosses_ch1.js`, `rooms_*.js` (maps + story), `menus.js`, `main.js`. New areas are added with `U.defRoom`, new enemies with `U.Enemy`, new songs with `U.Audio.define`.
+- Debug: `?debug&room=frost_town` jumps into a room with a test file; `?battle=catty` starts a battle; `&noenc` disables random encounters.
