@@ -1,0 +1,20 @@
+html,body{margin:0;padding:0;height:100%;background:#000;overflow:hidden;touch-action:none;-webkit-user-select:none;user-select:none;-webkit-touch-callout:none;-webkit-tap-highlight-color:transparent}
+#game{position:fixed;inset:0;display:flex;align-items:center;justify-content:center}
+#game.top{align-items:flex-start;padding-top:calc(8px + env(safe-area-inset-top))}
+#screen{image-rendering:pixelated;image-rendering:crisp-edges;background:#000;transition:filter .6s}
+#touch.hidden{display:none}
+#touch{position:fixed;inset:0;pointer-events:none;z-index:5}
+#dpad{position:absolute;left:calc(16px + env(safe-area-inset-left));bottom:calc(20px + env(safe-area-inset-bottom));width:148px;height:148px;border-radius:50%;background:rgba(255,255,255,.06);border:2px solid rgba(255,255,255,.25);pointer-events:auto;touch-action:none}
+#dpad:before,#dpad:after{content:"";position:absolute;background:rgba(255,255,255,.12);border-radius:6px}
+#dpad:before{left:50px;top:8px;width:48px;height:132px}
+#dpad:after{top:50px;left:8px;height:48px;width:132px}
+#knob{position:absolute;left:54px;top:54px;width:40px;height:40px;border-radius:50%;background:rgba(255,255,255,.3);z-index:2}
+#tbtns{position:absolute;right:calc(14px + env(safe-area-inset-right));bottom:calc(20px + env(safe-area-inset-bottom));width:180px;height:160px;pointer-events:none}
+.tb{position:absolute;pointer-events:auto;touch-action:none;display:flex;align-items:center;justify-content:center;font:bold 18px monospace;color:rgba(255,255,255,.9);border-radius:50%;border:2px solid rgba(255,255,255,.35);background:rgba(255,255,255,.08)}
+.tb.on{background:rgba(255,255,255,.35)}
+#tb-z{right:0;bottom:30px;width:74px;height:74px;border-color:rgba(255,226,58,.7);color:#ffe23a}
+#tb-x{right:86px;bottom:0;width:62px;height:62px}
+#tb-c{right:92px;bottom:86px;width:52px;height:52px;font-size:15px}
+#tb-p{left:50%;top:calc(8px + env(safe-area-inset-top));transform:translateX(-50%);width:46px;height:30px;border-radius:10px;font-size:13px}
+@media (orientation:portrait){#tb-p{top:auto;bottom:calc(190px + env(safe-area-inset-bottom));left:auto;right:calc(16px + env(safe-area-inset-right));transform:none}}
+@media (orientation:landscape){#tb-p{left:calc(12px + env(safe-area-inset-left));transform:none}}
